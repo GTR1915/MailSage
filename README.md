@@ -30,6 +30,18 @@ python Model_Management/main.py --subject "Project meeting" --from "rahul@exampl
 
 `main.py` uses `llama_cpp.Llama.create_chat_completion()` with a system/user chat prompt and JSON-mode output. It prints one structured result with a concise summary, important facts, recipient actions, and explicit deadlines.
 
+To inspect the model's raw streamed text for a particular one-based line in `emails.jsonl`, run:
+
+```powershell
+python Model_Management/model_prompt_check.py 1
+python Model_Management/model_prompt_check.py 1 --system-prompt "Extract every date and action item."
+python Model_Management/model_prompt_check.py 1 --system-prompt-file prompts/my-prompt.txt
+```
+
+The checker uses the default system prompt from `main.py` unless you override it. It mirrors the website's analysis request: use `body_text` or fall back to the Gmail `snippet` (never `body_html`), pass the sender address when present, use the website's subject fallback, and leave the recipient blank so the shared formatter supplies `Unknown`. It also uses the website's JSON-mode, 350-token streamed model call. Before generation, it prints the exact system prompt and formatted user input; then it prints the model's JSON response as it streams. Use `--input` to select a different JSONL file.
+
+`main.py` asks the model not to include reasoning in its response, but it does not explicitly disable the model's internal thinking mode. The checker uses that same prompt by default; a custom system prompt can change what the model is asked to output.
+
 Do not commit `credentials.json` or `.secrets/gmail-token.json`; they authorize access to the mailbox.
 
 ## GUI
