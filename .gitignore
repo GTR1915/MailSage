@@ -1,0 +1,6 @@
+credentials.json
+.secrets/
+.data/
+emails.jsonl
+__pycache__/
+Models

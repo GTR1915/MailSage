@@ -1,0 +1,1145 @@
+[/workspaces/default/code/src/App.tsx#1ecf]
+1:import { useMemo, useState } from "react"
+2:
+3:type IconName = "mail" | "sparkles" | "search" | "chevron" | "calendar" | "arrow" | "grid" | "star" | "settings" | "help" | "bell" | "close" | "check" | "refresh" | "clock" | "shield" | "external" | "more" | "file" | "logout"
+4:function Icon({
+5:  name,
+6:  size = 20,
+7:  className = "",
+8:}: {
+9:  name: IconName
+10:  size?: number
+11:  className?: string
+12:}) {
+13:  const paths: Record<IconName, React.ReactNode> = {
+14:    mail: (
+15:      <>
+16:        <rect x="3" y="5" width="18" height="14" rx="3" />
+17:        <path d="m3 7 9 6 9-6" />
+18:      </>
+19:    ),
+20:    sparkles: (
+21:      <>
+22:        <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />
+23:        <path d="m20 2 .6 1.4L22 4l-1.4.6L20 6l-.6-1.4L18 4l1.4-.6L20 2Z" />
+24:      </>
+25:    ),
+26:    search: (
+27:      <>
+28:        <circle cx="10.5" cy="10.5" r="6.5" />
+29:        <path d="m16 16 4 4" />
+30:      </>
+31:    ),
+32:    chevron: <path d="m9 5 7 7-7 7" />,
+33:    calendar: (
+34:      <>
+35:        <rect x="3" y="5" width="18" height="16" rx="3" />
+36:        <path d="M7 3v4M17 3v4M3 11h18M7 15h2m6 0h2M7 18h2" />
+37:      </>
+38:    ),
+39:    arrow: (
+40:      <>
+41:        <path d="M5 12h14m-5-5 5 5-5 5" />
+42:      </>
+43:    ),
+44:    grid: (
+45:      <>
+46:        <rect x="3" y="3" width="7" height="7" rx="2" />
+47:        <rect x="14" y="3" width="7" height="7" rx="2" />
+48:        <rect x="3" y="14" width="7" height="7" rx="2" />
+49:        <rect x="14" y="14" width="7" height="7" rx="2" />
+50:      </>
+51:    ),
+52:    star: (
+53:      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+54:    ),
+55:    settings: (
+56:      <>
+57:        <path d="m9 3-.5 3-2 .9L4 6l-2 4 2.5 2L4 15l2 3 3-.5 2 2.5h3l1.5-3 3-.5 2-3-2-2 .5-3-3-2-2 .5L13 3H9Z" />
+58:        <circle cx="11.5" cy="11.5" r="3" />
+59:      </>
+60:    ),
+61:    help: (
+62:      <>
+63:        <circle cx="12" cy="12" r="9" />
+64:        <path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01" />
+65:      </>
+66:    ),
+67:    bell: (
+68:      <>
+69:        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+70:      </>
+71:    ),
+72:    close: <path d="m6 6 12 12M6 18 18 6" />,
+73:    check: <path d="m5 12 4 4L19 6" />,
+74:    refresh: (
+75:      <>
+76:        <path d="M20 7v5h-5M4 17v-5h5" />
+77:        <path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />
+78:      </>
+79:    ),
+80:    clock: (
+81:      <>
+82:        <circle cx="12" cy="12" r="9" />
+83:        <path d="M12 7v5l3 2" />
+84:      </>
+85:    ),
+86:    shield: (
+87:      <>
+88:        <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z" />
+89:        <path d="m8 12 3 3 5-5" />
+90:      </>
+91:    ),
+92:    external: (
+93:      <>
+94:        <path d="M14 3h7v7m0-7L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+95:      </>
+96:    ),
+97:    more: (
+98:      <>
+99:        <circle cx="5" cy="12" r="1" />
+100:        <circle cx="12" cy="12" r="1" />
+101:        <circle cx="19" cy="12" r="1" />
+102:      </>
+103:    ),
+104:    file: (
+105:      <>
+106:        <path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 12h8M8 16h5" />
+107:      </>
+108:    ),
+109:    logout: (
+110:      <>
+111:        <path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h10" />
+112:      </>
+113:    ),
+114:  }
+115:  return (
+116:    <svg
+117:      width={size}
+118:      height={size}
+119:      viewBox="0 0 24 24"
+120:      fill="none"
+121:      stroke="currentColor"
+122:      strokeWidth="1.65"
+123:      strokeLinecap="round"
+124:      strokeLinejoin="round"
+125:      className={className}
+126:      aria-hidden="true"
+127:    >
+128:      {paths[name]}
+129:    </svg>
+130:  )
+131:}
+132:
+133:type Email = {
+134:  id: number
+135:  sender: string
+136:  address: string
+137:  initials: string
+138:  color: string
+139:  subject: string
+140:  preview: string
+141:  body: string
+142:  category: string
+143:  date: string
+144:  time: string
+145:  unread: boolean
+146:  action?: string
+147:}
+148:const EMAILS: Email[] = [
+149:  {
+150:    id: 1,
+151:    sender: "Olivia Rhye",
+152:    address: "olivia@acme.studio",
+153:    initials: "OR",
+154:    color: "purple",
+155:    subject: "Website redesign — ready for your review",
+156:    preview:
+157:      "Hey Alex, the latest designs are ready. Would love your thoughts…",
+158:    body: "Hey Alex,\n\nThe latest website redesign is ready for your review. We’ve incorporated the feedback from our last session and refined the homepage and product pages.\n\nCould you share your feedback by Wednesday? Once we have your approval, the engineering team can start the handoff.\n\nThanks,\nOlivia",
+159:    category: "Work",
+160:    date: "2025-06-16",
+161:    time: "10:42 AM",
+162:    unread: true,
+163:    action:
+164:      "Review the website redesign and send Olivia your feedback by Wednesday.",
+165:  },
+166:  {
+167:    id: 2,
+168:    sender: "Linear",
+169:    address: "notifications@linear.app",
+170:    initials: "L",
+171:    color: "violet",
+172:    subject: "Your weekly workspace digest",
+173:    preview: "Here’s what happened in your workspace this week. 12 issues…",
+174:    body: "Your weekly workspace digest\n\nYour team completed 12 issues, started 3 projects, and shipped the new onboarding flow. There are 4 issues assigned to you awaiting review.\n\nVisit your workspace to catch up with the team.",
+175:    category: "Updates",
+176:    date: "2025-06-16",
+177:    time: "9:15 AM",
+178:    unread: true,
+179:  },
+180:  {
+181:    id: 3,
+182:    sender: "James Wilson",
+183:    address: "james@acme.studio",
+184:    initials: "JW",
+185:    color: "blue",
+186:    subject: "Quick sync on the Q3 roadmap?",
+187:    preview:
+188:      "Hi Alex, can we find 30 minutes this week to align on priorities?",
+189:    body: "Hi Alex,\n\nCan we find 30 minutes this week to align on our Q3 priorities? I’d like to discuss the analytics dashboard, customer onboarding, and the mobile release.\n\nI’m free Tuesday at 2 PM or Thursday at 10 AM. Let me know what works for you.\n\nBest,\nJames",
+190:    category: "Work",
+191:    date: "2025-06-15",
+192:    time: "Jun 15",
+193:    unread: true,
+194:    action:
+195:      "Confirm a 30-minute roadmap sync with James: Tuesday at 2 PM or Thursday at 10 AM.",
+196:  },
+197:  {
+198:    id: 4,
+199:    sender: "Notion",
+200:    address: "team@makenotion.com",
+201:    initials: "N",
+202:    color: "neutral",
+203:    subject: "A little more focus. A lot more possibility.",
+204:    preview:
+205:      "Meet the new features designed to help your team do its best work.",
+206:    body: "Meet the new features designed to help your team do its best work.\n\nDiscover connected projects, improved search, and a simpler calendar experience. Read our latest product update for a full overview.",
+207:    category: "Promotions",
+208:    date: "2025-06-15",
+209:    time: "Jun 15",
+210:    unread: false,
+211:  },
+212:  {
+213:    id: 5,
+214:    sender: "Sarah Chen",
+215:    address: "sarah@acme.studio",
+216:    initials: "SC",
+217:    color: "rose",
+218:    subject: "June invoice & project summary",
+219:    preview: "Attached is the invoice for this month along with a quick recap…",
+220:    body: "Hi Alex,\n\nHere is the invoice for June, totaling $2,400, along with a quick recap of the work completed: design system updates, dashboard wireframes, and usability testing.\n\nPlease arrange payment by June 25. Let me know if you have any questions.\n\nThank you,\nSarah",
+221:    category: "Finance",
+222:    date: "2025-06-14",
+223:    time: "Jun 14",
+224:    unread: false,
+225:    action: "Arrange payment of Sarah’s $2,400 June invoice by June 25.",
+226:  },
+227:  {
+228:    id: 6,
+229:    sender: "Figma",
+230:    address: "team@figma.com",
+231:    initials: "F",
+232:    color: "orange",
+233:    subject: "Your next great idea starts here",
+234:    preview: "A few things to inspire your next project. Explore what’s new…",
+235:    body: "A few things to inspire your next project.\n\nExplore our latest community resources, learn from fellow designers, and discover new ways to bring your ideas to life with Figma.",
+236:    category: "Updates",
+237:    date: "2025-06-13",
+238:    time: "Jun 13",
+239:    unread: false,
+240:  },
+241:  {
+242:    id: 7,
+243:    sender: "Michael Foster",
+244:    address: "michael@acme.studio",
+245:    initials: "MF",
+246:    color: "teal",
+247:    subject: "Re: Customer interview notes",
+248:    preview: "Thanks for pulling these together. A few interesting patterns…",
+249:    body: "Hey Alex,\n\nThanks for pulling these customer interview notes together. A few interesting patterns stood out: users want faster onboarding, clearer analytics, and better export options.\n\nLet’s include these insights in the next product planning session.\n\nCheers,\nMichael",
+250:    category: "Work",
+251:    date: "2025-06-12",
+252:    time: "Jun 12",
+253:    unread: false,
+254:  },
+255:  {
+256:    id: 8,
+257:    sender: "Stripe",
+258:    address: "receipts@stripe.com",
+259:    initials: "S",
+260:    color: "violet",
+261:    subject: "Your receipt from Framer",
+262:    preview:
+263:      "Your payment of $20.00 to Framer has been processed successfully.",
+264:    body: "Your payment has been processed successfully.\n\nMerchant: Framer\nAmount: $20.00\nDate: June 11, 2025\nPlan: Monthly subscription\n\nKeep this receipt for your records.",
+265:    category: "Finance",
+266:    date: "2025-06-11",
+267:    time: "Jun 11",
+268:    unread: false,
+269:  },
+270:]
+271:const categories = ["All emails", "Work", "Updates", "Promotions", "Finance"]
+272:const dateLabel = (date: string) =>
+273:  new Date(`${date}T12:00:00`).toLocaleDateString("en-US", {
+274:    month: "short",
+275:    day: "numeric",
+276:    year: "numeric",
+277:  })
+278:
+279:export default function App() {
+280:  const [page, setPage] = useState("Inbox")
+281:  const [query, setQuery] = useState("")
+282:  const [category, setCategory] = useState("All emails")
+283:  const [start, setStart] = useState("2025-06-10")
+284:  const [end, setEnd] = useState("2025-06-16")
+285:  const [range, setRange] = useState({ start: "2025-06-10", end: "2025-06-16" })
+286:  const [fetching, setFetching] = useState(false)
+287:  const [selected, setSelected] = useState<number[]>([])
+288:  const [stars, setStars] = useState<number[]>([3])
+289:  const [read, setRead] = useState<number[]>([])
+290:  const [activeEmail, setActiveEmail] = useState<Email | null>(null)
+291:  const [analyzed, setAnalyzed] = useState<Email[]>([])
+292:  const [analyzing, setAnalyzing] = useState(false)
+293:  const [notice, setNotice] = useState("")
+294:  const [modal, setModal] = useState<"settings" | "help" | null>(null)
+295:  const [dateMenu, setDateMenu] = useState(false)
+296:  const fetched = useMemo(
+297:    () => EMAILS.filter((e) => e.date >= range.start && e.date <= range.end),
+298:    [range],
+299:  )
+300:  const visible = fetched.filter(
+301:    (e) =>
+302:      (page !== "Starred" || stars.includes(e.id)) &&
+303:      (category === "All emails" || e.category === category) &&
+304:      `${e.sender} ${e.subject} ${e.preview}`
+305:        .toLowerCase()
+306:        .includes(query.toLowerCase()),
+307:  )
+308:  const unread = fetched.filter((e) => e.unread && !read.includes(e.id)).length
+309:  function notify(message: string) {
+310:    setNotice(message)
+311:    window.setTimeout(() => setNotice(""), 4500)
+312:  }
+313:  function fetchEmails() {
+314:    if (!start || !end || start > end) {
+315:      notify(
+316:        "Choose a valid date range. The start date must come before the end date.",
+317:      )
+318:      return
+319:    }
+320:    setFetching(true)
+321:    window.setTimeout(() => {
+322:      setRange({ start, end })
+323:      setSelected([])
+324:      setFetching(false)
+325:      notify("Demo inbox refreshed. Connect Gmail to fetch your real emails.")
+326:    }, 700)
+327:  }
+328:  function analyze(emails: Email[]) {
+329:    if (!emails.length) {
+330:      notify("Select at least one email to analyze.")
+331:      return
+332:    }
+333:    setAnalyzing(true)
+334:    setActiveEmail(null)
+335:    window.setTimeout(() => {
+336:      setAnalyzed(emails)
+337:      setAnalyzing(false)
+338:    }, 1000)
+339:  }
+340:  function toggleSelected(id: number) {
+341:    setSelected((prev) =>
+342:      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+343:    )
+344:  }
+345:  function toggleStar(id: number) {
+346:    setStars((prev) =>
+347:      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+348:    )
+349:  }
+350:  const allSelected =
+351:    visible.length > 0 && visible.every((e) => selected.includes(e.id))
+352:  return (
+353:    <div className="app-shell">
+354:      <aside className="sidebar">
+355:        <a
+356:          className="brand"
+357:          href="#"
+358:          onClick={(e) => {
+359:            e.preventDefault()
+360:            setPage("Inbox")
+361:          }}
+362:        >
+363:          <span className="brand-mark">
+364:            <Icon name="mail" size={23} />
+365:          </span>
+366:          mailwise<span className="brand-dot">.</span>
+367:        </a>
+368:        <div className="workspace">
+369:          <span className="workspace-avatar">A</span>
+370:          <div>
+371:            <strong>Alex’s workspace</strong>
+372:            <span>Personal account</span>
+373:          </div>
+374:          <Icon name="chevron" size={15} className="rotate-down" />
+375:        </div>
+376:        <div className="nav-label">WORKSPACE</div>
+377:        <nav>
+378:          {([
+379:            { label: "Inbox", icon: "mail" },
+380:            { label: "AI analyses", icon: "sparkles" },
+381:            { label: "Starred", icon: "star" },
+382:          ] as const).map((item) => (
+383:            <button
+384:              key={item.label}
+385:              className={`nav-item ${page === item.label ? "active" : ""}`}
+386:              onClick={() => {
+387:                setPage(item.label)
+388:                setCategory("All emails")
+389:                setQuery("")
+390:              }}
+391:            >
+392:              <Icon name={item.icon} size={19} />
+393:              <span>{item.label}</span>
+394:              {item.label === "Inbox" && (
+395:                <span className="nav-count">{fetched.length}</span>
+396:              )}
+397:              {item.label === "AI analyses" && (
+398:                <span className="new-badge">NEW</span>
+399:              )}
+400:            </button>
+401:          ))}
+402:        </nav>
+403:        <div className="sidebar-bottom">
+404:          <div className="connection-card">
+405:            <span className="connection-icon">
+406:              <Icon name="shield" size={19} />
+407:            </span>
+408:            <strong>Your inbox, only smarter.</strong>
+409:            <p>You’re in control of what you share with AI. Always.</p>
+410:            <button onClick={() => setModal("help")}>
+411:              Learn how it works <Icon name="arrow" size={15} />
+412:            </button>
+413:          </div>
+414:          <button className="nav-item" onClick={() => setModal("settings")}>
+415:            <Icon name="settings" size={19} />
+416:            Settings
+417:          </button>
+418:          <button className="nav-item" onClick={() => setModal("help")}>
+419:            <Icon name="help" size={19} />
+420:            Help & getting started
+421:            <Icon name="external" size={13} />
+422:          </button>
+423:          <div className="profile">
+424:            <span className="profile-avatar">AL</span>
+425:            <div>
+426:              <strong>Alex Lewis</strong>
+427:              <span>alex.lewis@gmail.com</span>
+428:            </div>
+429:            <button
+430:              className="icon-button"
+431:              aria-label="Account settings"
+432:              onClick={() => setModal("settings")}
+433:            >
+434:              <Icon name="more" size={18} />
+435:            </button>
+436:          </div>
+437:        </div>
+438:      </aside>
+439:      <div className="main-shell">
+440:        <header className="topbar">
+441:          <div className="breadcrumb">
+442:            Workspace <Icon name="chevron" size={14} />
+443:            <span>{page}</span>
+444:          </div>
+445:          <div className="topbar-actions">
+446:            <span className="demo-badge">
+447:              <span />
+448:              Demo workspace
+449:            </span>
+450:            <button
+451:              className="icon-button"
+452:              aria-label="Help"
+453:              onClick={() => setModal("help")}
+454:            >
+455:              <Icon name="help" size={19} />
+456:            </button>
+457:            <button
+458:              className="icon-button notification-button"
+459:              aria-label="Notifications"
+460:              onClick={() =>
+461:                notify("You’re all caught up. No new notifications.")
+462:              }
+463:            >
+464:              <Icon name="bell" size={19} />
+465:              <i />
+466:            </button>
+467:            <span className="profile-avatar small">AL</span>
+468:          </div>
+469:        </header>
+470:        <main>
+471:          <div className="page-heading">
+472:            <div>
+473:              <div className="eyebrow">A LITTLE CLARITY FOR YOUR INBOX</div>
+474:              <h1>
+475:                {page === "Inbox"
+476:                  ? "Your inbox, in focus."
+477:                  : page === "Starred"
+478:                    ? "The emails worth keeping."
+479:                    : "Less reading. More understanding."}
+480:              </h1>
+481:              <p>
+482:                {page === "AI analyses"
+483:                  ? "Turn your conversations into clear insights and next steps."
+484:                  : "Bring your emails together. Let AI connect the dots."}
+485:              </p>
+486:            </div>
+487:            <button
+488:              className="button secondary connect-button"
+489:              onClick={() => setModal("settings")}
+490:            >
+491:              <GmailMark />
+492:              <span>Connect Gmail</span>
+493:              <Icon name="external" size={14} />
+494:            </button>
+495:          </div>
+496:          <section className="fetch-card" aria-label="Fetch emails by date">
+497:            <div className="fetch-title">
+498:              <span className="surface-icon">
+499:                <Icon name="calendar" size={21} />
+500:              </span>
+501:              <div>
+502:                <h2>Start with a time frame</h2>
+503:                <p>Choose a date range to fetch your emails.</p>
+504:              </div>
+505:            </div>
+506:            <div className="date-controls">
+507:              <label className="date-field">
+508:                <span>From</span>
+509:                <input
+510:                  aria-label="Start date"
+511:                  type="date"
+512:                  value={start}
+513:                  onChange={(e) => setStart(e.target.value)}
+514:                />
+515:              </label>
+516:              <span className="date-divider">–</span>
+517:              <label className="date-field">
+518:                <span>To</span>
+519:                <input
+520:                  aria-label="End date"
+521:                  type="date"
+522:                  value={end}
+523:                  onChange={(e) => setEnd(e.target.value)}
+524:                />
+525:              </label>
+526:              <div className="date-preset-wrap">
+527:                <button
+528:                  className="preset-button"
+529:                  onClick={() => setDateMenu(!dateMenu)}
+530:                >
+531:                  Last 7 days
+532:                  <Icon name="chevron" size={13} className="rotate-down" />
+533:                </button>
+534:                {dateMenu && (
+535:                  <div className="preset-menu">
+536:                    {[7, 14, 30].map((days) => (
+537:                      <button
+538:                        key={days}
+539:                        onClick={() => {
+540:                          const d = new Date("2025-06-16T12:00:00")
+541:                          d.setDate(d.getDate() - days + 1)
+542:                          setStart(d.toISOString().slice(0, 10))
+543:                          setEnd("2025-06-16")
+544:                          setDateMenu(false)
+545:                        }}
+546:                      >
+547:                        Last {days} days
+548:                      </button>
+549:                    ))}
+550:                  </div>
+551:                )}
+552:              </div>
+553:              <button
+554:                className="button primary"
+555:                onClick={fetchEmails}
+556:                disabled={fetching}
+557:              >
+558:                <Icon
+559:                  name={fetching ? "refresh" : "mail"}
+560:                  size={17}
+561:                  className={fetching ? "spinning" : ""}
+562:                />
+563:                {fetching ? "Fetching…" : "Fetch emails"}
+564:              </button>
+565:            </div>
+566:          </section>
+567:          <div className="stats-grid">
+568:            <Stat
+569:              icon="mail"
+570:              label="Emails fetched"
+571:              value={fetched.length}
+572:              detail="In your selected time frame"
+573:              color="green"
+574:            />
+575:            <Stat
+576:              icon="mail"
+577:              label="Unread emails"
+578:              value={unread}
+579:              detail="A few things to catch up on"
+580:              color="blue"
+581:            />
+582:            <Stat
+583:              icon="sparkles"
+584:              label="Emails analyzed"
+585:              value={analyzed.length}
+586:              detail="A little less noise, a little more clarity"
+587:              color="purple"
+588:            />
+589:          </div>
+590:          <div className="inbox-layout">
+591:            <section className="inbox-card">
+592:              <div className="inbox-title">
+593:                <div>
+594:                  <h2>
+595:                    {page === "AI analyses"
+596:                      ? "Analyzed emails"
+597:                      : page === "Starred"
+598:                        ? "Starred emails"
+599:                        : "Fetched emails"}{" "}
+600:                    <span className="count-pill">
+601:                      {page === "AI analyses"
+602:                        ? analyzed.length
+603:                        : visible.length}
+604:                    </span>
+605:                  </h2>
+606:                  <p>
+607:                    {dateLabel(range.start)} <span>–</span>{" "}
+608:                    {dateLabel(range.end)}
+609:                  </p>
+610:                </div>
+611:                <button
+612:                  className="icon-button"
+613:                  aria-label="Refresh emails"
+614:                  onClick={fetchEmails}
+615:                >
+616:                  <Icon
+617:                    name="refresh"
+618:                    size={17}
+619:                    className={fetching ? "spinning" : ""}
+620:                  />
+621:                </button>
+622:              </div>
+623:              <div className="email-toolbar">
+624:                <div className="tabs">
+625:                  {categories.map((c) => (
+626:                    <button
+627:                      key={c}
+628:                      className={category === c ? "selected" : ""}
+629:                      onClick={() => setCategory(c)}
+630:                    >
+631:                      {c}
+632:                    </button>
+633:                  ))}
+634:                </div>
+635:                <div className="search-field">
+636:                  <Icon name="search" size={16} />
+637:                  <input
+638:                    aria-label="Search emails"
+639:                    placeholder="Search emails…"
+640:                    value={query}
+641:                    onChange={(e) => setQuery(e.target.value)}
+642:                  />
+643:                  <span>⌘ K</span>
+644:                </div>
+645:              </div>
+646:              <div className="table-head">
+647:                <label className="select-all">
+648:                  <input
+649:                    type="checkbox"
+650:                    aria-label="Select all emails"
+651:                    checked={allSelected}
+652:                    onChange={() =>
+653:                      setSelected(allSelected ? [] : visible.map((e) => e.id))
+654:                    }
+655:                  />
+656:                  <span>
+657:                    {selected.length ? `${selected.length} selected` : "Email"}
+658:                  </span>
+659:                </label>
+660:                <button
+661:                  className="bulk-ai"
+662:                  onClick={() =>
+663:                    analyze(
+664:                      selected.length
+665:                        ? fetched.filter((e) => selected.includes(e.id))
+666:                        : visible,
+667:                    )
+668:                  }
+669:                >
+670:                  <Icon name="sparkles" size={14} />
+671:                  {selected.length ? "Analyze selected" : "Analyze all"}
+672:                  <Icon name="arrow" size={14} />
+673:                </button>
+674:              </div>
+675:              <div className="email-list">
+676:                {(page === "AI analyses"
+677:                  ? visible.filter((e) => analyzed.some((a) => a.id === e.id))
+678:                  : visible
+679:                ).map((email) => (
+680:                  <div
+681:                    className={`email-row ${
+682:                      selected.includes(email.id) ? "is-selected" : ""
+683:                    }`}
+684:                    key={email.id}
+685:                  >
+686:                    <input
+687:                      type="checkbox"
+688:                      aria-label={`Select email from ${email.sender}`}
+689:                      checked={selected.includes(email.id)}
+690:                      onChange={() => toggleSelected(email.id)}
+691:                    />
+692:                    <span className={`sender-avatar ${email.color}`}>
+693:                      {email.initials}
+694:                    </span>
+695:                    <button
+696:                      className="email-content"
+697:                      onClick={() => {
+698:                        setActiveEmail(email)
+699:                        setRead((prev) => [...prev, email.id])
+700:                      }}
+701:                    >
+702:                      <div className="sender-line">
+703:                        <strong>{email.sender}</strong>
+704:                        {email.unread && !read.includes(email.id) && (
+705:                          <span className="unread-dot" />
+706:                        )}
+707:                        <span
+708:                          className={`category-badge ${email.category.toLowerCase()}`}
+709:                        >
+710:                          {email.category}
+711:                        </span>
+712:                      </div>
+713:                      <div
+714:                        className={`email-subject ${
+715:                          email.unread && !read.includes(email.id)
+716:                            ? "unread"
+717:                            : ""
+718:                        }`}
+719:                      >
+720:                        {email.subject}
+721:                      </div>
+722:                      <p>{email.preview}</p>
+723:                    </button>
+724:                    <div className="email-end">
+725:                      <span className="email-time">{email.time}</span>
+726:                      <div className="row-actions">
+727:                        <button
+728:                          className={`icon-button star-button ${
+729:                            stars.includes(email.id) ? "starred" : ""
+730:                          }`}
+731:                          aria-label={`${
+732:                            stars.includes(email.id) ? "Unstar" : "Star"
+733:                          } email from ${email.sender}`}
+734:                          onClick={() => toggleStar(email.id)}
+735:                        >
+736:                          <Icon name="star" size={15} />
+737:                        </button>
+738:                        <button
+739:                          className="email-ai"
+740:                          aria-label={`Analyze email from ${email.sender}`}
+741:                          title="Share this email with AI"
+742:                          onClick={() => analyze([email])}
+743:                        >
+744:                          <Icon name="sparkles" size={16} />
+745:                        </button>
+746:                      </div>
+747:                    </div>
+748:                  </div>
+749:                ))}
+750:                {(page === "AI analyses"
+751:                  ? !visible.some((e) => analyzed.some((a) => a.id === e.id))
+752:                  : !visible.length) && (
+753:                  <div className="empty-state">
+754:                    <Icon name="mail" size={30} />
+755:                    <h3>
+756:                      {page === "AI analyses"
+757:                        ? "Your insights start with an email"
+758:                        : "No emails found"}
+759:                    </h3>
+760:                    <p>
+761:                      {page === "AI analyses"
+762:                        ? "Click the sparkle beside any email to analyze it."
+763:                        : "Try a different search, category, or date range."}
+764:                    </p>
+765:                  </div>
+766:                )}
+767:              </div>
+768:              <div className="table-footer">
+769:                <span>
+770:                  Showing{" "}
+771:                  {page === "AI analyses"
+772:                    ? visible.filter((e) => analyzed.some((a) => a.id === e.id))
+773:                        .length
+774:                    : visible.length}{" "}
+775:                  of {fetched.length} emails
+776:                </span>
+777:                <span>
+778:                  <span className="tiny-dot" />
+779:                  All caught up
+780:                </span>
+781:              </div>
+782:            </section>
+783:            <aside className="ai-panel">
+784:              <div className="ai-panel-heading">
+785:                <span className="ai-icon">
+786:                  <Icon name="sparkles" size={20} />
+787:                </span>
+788:                <h2>Your AI copilot</h2>
+789:                <span className="beta-badge">BETA</span>
+790:              </div>
+791:              {analyzing ? (
+792:                <div className="ai-welcome">
+793:                  <div className="orb spinning">
+794:                    <Icon name="sparkles" size={32} />
+795:                  </div>
+796:                  <h3>Connecting the dots…</h3>
+797:                  <p>Preparing your demo summary and next steps.</p>
+798:                </div>
+799:              ) : analyzed.length ? (
+800:                <div className="analysis-result">
+801:                  <span className="result-kicker">
+802:                    <Icon name="check" size={14} />
+803:                    DEMO ANALYSIS COMPLETE
+804:                  </span>
+805:                  <h3>A clearer picture.</h3>
+806:                  <p className="result-count">
+807:                    Based on {analyzed.length}{" "}
+808:                    {analyzed.length === 1 ? "email" : "emails"} you shared.
+809:                  </p>
+810:                  <h4>At a glance</h4>
+811:                  {analyzed.map((e) => (
+812:                    <div className="summary-item" key={e.id}>
+813:                      <strong>{e.sender}</strong>
+814:                      <p>
+815:                        {e.body
+816:                          .split("\n")
+817:                          .filter(Boolean)
+818:                          .slice(1, 2)
+819:                          .join(" ") || e.preview}
+820:                      </p>
+821:                    </div>
+822:                  ))}
+823:                  <h4>Next steps</h4>
+824:                  {analyzed.some((e) => e.action) ? (
+825:                    analyzed
+826:                      .filter((e) => e.action)
+827:                      .map((e) => (
+828:                        <div className="action-item" key={e.id}>
+829:                          <Icon name="check" size={15} />
+830:                          <p>{e.action}</p>
+831:                        </div>
+832:                      ))
+833:                  ) : (
+834:                    <p className="no-actions">
+835:                      No immediate action needed. You’re all caught up.
+836:                    </p>
+837:                  )}
+838:                  <button
+839:                    className="button secondary full-width"
+840:                    onClick={() => {
+841:                      setAnalyzed([])
+842:                      setPage("Inbox")
+843:                    }}
+844:                  >
+845:                    Clear analysis
+846:                  </button>
+847:                  <p className="demo-disclaimer">
+848:                    Local demo summary · No content was sent to an AI service.
+849:                  </p>
+850:                </div>
+851:              ) : (
+852:                <>
+853:                  <div className="ai-welcome">
+854:                    <div className="orb">
+855:                      <Icon name="sparkles" size={35} />
+856:                    </div>
+857:                    <span className="mini-spark one" aria-hidden="true">
+858:                      <Icon name="sparkles" size={14} />
+859:                    </span>
+860:                    <span className="mini-spark two" aria-hidden="true">
+861:                      <Icon name="sparkles" size={9} />
+862:                    </span>
+863:                    <h3>
+864:                      Less inbox.
+865:                      <br />
+866:                      More insight.
+867:                    </h3>
+868:                    <p>
+869:                      Your emails have a story to tell.
+870:                      <br />
+871:                      Let’s find the important parts.
+872:                    </p>
+873:                  </div>
+874:                  <div className="ai-features">
+875:                    <div>
+876:                      <span className="feature-icon">
+877:                        <Icon name="file" size={16} />
+878:                      </span>
+879:                      <div>
+880:                        <strong>Get the bigger picture</strong>
+881:                        <p>Quick summaries, without the scroll.</p>
+882:                      </div>
+883:                    </div>
+884:                    <div>
+885:                      <span className="feature-icon">
+886:                        <Icon name="check" size={17} />
+887:                      </span>
+888:                      <div>
+889:                        <strong>Find your next steps</strong>
+890:                        <p>Turn conversations into action.</p>
+891:                      </div>
+892:                    </div>
+893:                    <div>
+894:                      <span className="feature-icon">
+895:                        <Icon name="grid" size={16} />
+896:                      </span>
+897:                      <div>
+898:                        <strong>Connect the dots</strong>
+899:                        <p>Spot themes across your emails.</p>
+900:                      </div>
+901:                    </div>
+902:                  </div>
+903:                  <div className="ai-tip">
+904:                    <span className="tip-spark">
+905:                      <Icon name="sparkles" size={16} />
+906:                    </span>
+907:                    <p>
+908:                      Click the <strong>sparkle icon</strong> on any email, or
+909:                      select a few to analyze together.
+910:                    </p>
+911:                  </div>
+912:                </>
+913:              )}
+914:              <div className="ai-privacy">
+915:                <Icon name="shield" size={14} />
+916:                <span>Only the emails you choose. Always.</span>
+917:              </div>
+918:            </aside>
+919:          </div>
+920:          <footer className="page-footer">
+921:            <span>Made for a calmer, clearer inbox.</span>
+922:            <span>
+923:              <Icon name="shield" size={13} />
+924:              Your data stays yours.
+925:            </span>
+926:          </footer>
+927:        </main>
+928:      </div>
+929:      {notice && (
+930:        <div className="toast" role="status">
+931:          <Icon name="check" size={18} />
+932:          <span>{notice}</span>
+933:          <button
+934:            className="icon-button"
+935:            aria-label="Dismiss notification"
+936:            onClick={() => setNotice("")}
+937:          >
+938:            <Icon name="close" size={16} />
+939:          </button>
+940:        </div>
+941:      )}
+942:      {(activeEmail || modal) && (
+943:        <div
+944:          className="modal-backdrop"
+945:          onClick={() => {
+946:            setActiveEmail(null)
+947:            setModal(null)
+948:          }}
+949:        >
+950:          <section
+951:            className="modal"
+952:            role="dialog"
+953:            aria-modal="true"
+954:            aria-label={
+955:              activeEmail
+956:                ? activeEmail.subject
+957:                : modal === "settings"
+958:                  ? "Account settings"
+959:                  : "Getting started"
+960:            }
+961:            onClick={(e) => e.stopPropagation()}
+962:          >
+963:            <button
+964:              className="modal-close icon-button"
+965:              aria-label="Close dialog"
+966:              onClick={() => {
+967:                setActiveEmail(null)
+968:                setModal(null)
+969:              }}
+970:            >
+971:              <Icon name="close" />
+972:            </button>
+973:            {activeEmail ? (
+974:              <>
+975:                <span
+976:                  className={`category-badge ${activeEmail.category.toLowerCase()}`}
+977:                >
+978:                  {activeEmail.category}
+979:                </span>
+980:                <h2>{activeEmail.subject}</h2>
+981:                <div className="modal-sender">
+982:                  <span className={`sender-avatar ${activeEmail.color}`}>
+983:                    {activeEmail.initials}
+984:                  </span>
+985:                  <div>
+986:                    <strong>{activeEmail.sender}</strong>
+987:                    <p>{activeEmail.address}</p>
+988:                  </div>
+989:                  <span>{dateLabel(activeEmail.date)}</span>
+990:                </div>
+991:                <div className="email-body">{activeEmail.body}</div>
+992:                <div className="modal-bottom">
+993:                  <span>
+994:                    <Icon name="shield" size={15} />
+995:                    Share only this email
+996:                  </span>
+997:                  <button
+998:                    className="button primary"
+999:                    onClick={() => analyze([activeEmail])}
+1000:                  >
+1001:                    <Icon name="sparkles" size={17} />
+1002:                    Analyze with AI
+1003:                  </button>
+1004:                </div>
+1005:              </>
+1006:            ) : modal === "settings" ? (
+1007:              <>
+1008:                <span className="surface-icon">
+1009:                  <GmailMark />
+1010:                </span>
+1011:                <h2>Connect your Gmail</h2>
+1012:                <p className="modal-description">
+1013:                  Your workspace is currently using sample emails. A live Gmail
+1014:                  connection requires Google OAuth and a secure backend.
+1015:                </p>
+1016:                <div className="integration-status">
+1017:                  <span className="tiny-dot" />
+1018:                  Demo mode · No Google account connected
+1019:                </div>
+1020:                <h3>Designed with your privacy in mind</h3>
+1021:                <p className="modal-description">
+1022:                  Emails will only be shared with an AI service when you
+1023:                  explicitly choose to analyze them. This demo does not fetch
+1024:                  real emails or transmit any content.
+1025:                </p>
+1026:                <button
+1027:                  className="button primary full-width"
+1028:                  onClick={() => {
+1029:                    setModal(null)
+1030:                    notify("You can explore all features using the demo inbox.")
+1031:                  }}
+1032:                >
+1033:                  Continue with demo inbox
+1034:                  <Icon name="arrow" size={16} />
+1035:                </button>
+1036:              </>
+1037:            ) : (
+1038:              <>
+1039:                <span className="ai-icon">
+1040:                  <Icon name="sparkles" />
+1041:                </span>
+1042:                <h2>A calmer inbox starts here.</h2>
+1043:                <div className="help-step">
+1044:                  <span>1</span>
+1045:                  <div>
+1046:                    <h3>Choose your time frame</h3>
+1047:                    <p>
+1048:                      Pick a date range and click Fetch emails. Demo emails are
+1049:                      available June 11–16, 2025.
+1050:                    </p>
+1051:                  </div>
+1052:                </div>
+1053:                <div className="help-step">
+1054:                  <span>2</span>
+1055:                  <div>
+1056:                    <h3>Find what matters</h3>
+1057:                    <p>
+1058:                      Search, filter by category, star an email, or open it to
+1059:                      read the full conversation.
+1060:                    </p>
+1061:                  </div>
+1062:                </div>
+1063:                <div className="help-step">
+1064:                  <span>3</span>
+1065:                  <div>
+1066:                    <h3>Let the copilot help</h3>
+1067:                    <p>
+1068:                      Click an email’s sparkle icon or select multiple emails to
+1069:                      see a local demo summary and action items. No data leaves
+1070:                      this app.
+1071:                    </p>
+1072:                  </div>
+1073:                </div>
+1074:                <button
+1075:                  className="button primary full-width"
+1076:                  onClick={() => setModal(null)}
+1077:                >
+1078:                  Got it. Let’s explore
+1079:                  <Icon name="arrow" size={16} />
+1080:                </button>
+1081:              </>
+1082:            )}
+1083:          </section>
+1084:        </div>
+1085:      )}
+1086:    </div>
+1087:  )
+1088:}
+1089:function Stat({
+1090:  icon,
+1091:  label,
+1092:  value,
+1093:  detail,
+1094:  color,
+1095:}: {
+1096:  icon: IconName
+1097:  label: string
+1098:  value: number
+1099:  detail: string
+1100:  color: string
+1101:}) {
+1102:  return (
+1103:    <div className="stat-card">
+1104:      <div className="stat-top">
+1105:        <span>{label}</span>
+1106:        <span className={`stat-icon ${color}`}>
+1107:          <Icon name={icon} size={18} />
+1108:        </span>
+1109:      </div>
+1110:      <div className="stat-value">
+1111:        {value}
+1112:        <span className="stat-detail">{detail}</span>
+1113:      </div>
+1114:    </div>
+1115:  )
+1116:}
+1117:function GmailMark() {
+1118:  return (
+1119:    <svg
+1120:      width="19"
+1121:      height="17"
+1122:      viewBox="0 0 24 20"
+1123:      fill="none"
+1124:      aria-hidden="true"
+1125:    >
+1126:      <path
+1127:        d="M2 18V5l10 7 10-7v13"
+1128:        stroke="#4285F4"
+1129:        strokeWidth="4"
+1130:        strokeLinejoin="round"
+1131:      />
+1132:      <path d="M2 5v13" stroke="#34A853" strokeWidth="4" />
+1133:      <path
+1134:        d="m2 5 10 7L22 5"
+1135:        stroke="#EA4335"
+1136:        strokeWidth="4"
+1137:        strokeLinejoin="round"
+1138:      />
+1139:      <path d="M22 5v13" stroke="#FBBC04" strokeWidth="4" />
+1140:    </svg>
+1141:  )
+1142:}
+
+(End of file — 1142 lines.)

@@ -1,0 +1,20 @@
+Succesfully Completed:
+There should be an internal mapping of the fetched data.
+Once the mail is fetched to locally of a specific duration then save it in a local database so that when ever we will fetch again in future then first check and fetch from locally and for those time durations which are not present locally, fetch them from gmail_api.py.  This feature will help in minimising fetching the same content again and again.
+
+There should also be a option for fetch again which will fetch the data again even if it is present locally so that the tags maybe get updated and it will update local database as well.
+
+There should be a loading bar which which should show while fetching the data (mails), it will represent how much data has been fetched from overall and how much is remaining. Once the fetching of the data completes the loading bar should get removed.
+
+
+
+Still pending:
+when we open an email, most of the time the size of the opened window is not best fit for the opened email html page, make the email viewer size automatically adjustable according to the html page.
+I want the streaming = True for the response generation by the model. And therefore change suitable mechanisms as well whereever needed in the project.
+While analysing some linkedin mails, the model is giving error and saying "Unterminated string starting at: line 1 column 13 (char 12)  X", so fix them.
+Implement the same structure of "AI Analyses" tab from the figma_backup_version to the main webpage present in figma folder. We want same design.
+In the key insights section of the new "AI Analyses" tab, there should be the short summary of the email and in the right section (Next Steps moving things forward) there should be suggestions which the user might want to take, so include suggestion (action in text) and suggestive buttons there as well according to the email. The buttons should be working and it may possible that those buttons reflect the same thing (or link) which is mentioned in the email itself and further more if AI wants to suggest something more than those (like url etc.) then that can also be present there but it should be meaningful and relevent.
+If the user gives the command to analyse only one email, then its all summary report should be present in the right side on the same tab 'Inbox' tab (do not automatically redirect to AI Analysys tab)
+But if the user gave command to analyse more then one email then redirect (or open) AI Analyses tab.
+All the analyses should have a cross button as well to remove them from the AI analyses tab to make the tab look clean.
+AI Analysys tab will include all the analyses the model has done yet unless you haven't take any actions on them or close them by clicking their cross button.

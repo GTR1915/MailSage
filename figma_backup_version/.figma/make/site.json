@@ -1,0 +1,10 @@
+{
+  "description": "Analyze your Gmail inbox by fetching emails from a specified time period and easily share content with AI for insights and assistance.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -1,0 +1,1277 @@
+import { useState } from "react"
+import DOMPurify from "dompurify"
+
+type IconName = "mail" | "sparkles" | "search" | "chevron" | "calendar" | "arrow" | "grid" | "star" | "settings" | "help" | "bell" | "close" | "check" | "refresh" | "clock" | "shield" | "external" | "more" | "file" | "logout"
+function Icon({
+  name,
+  size = 20,
+  className = "",
+}: {
+  name: IconName
+  size?: number
+  className?: string
+}) {
+  const paths: Record<IconName, React.ReactNode> = {
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="3" />
+        <path d="m3 7 9 6 9-6" />
+      </>
+    ),
+    sparkles: (
+      <>
+        <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z" />
+        <path d="m20 2 .6 1.4L22 4l-1.4.6L20 6l-.6-1.4L18 4l1.4-.6L20 2Z" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m16 16 4 4" />
+      </>
+    ),
+    chevron: <path d="m9 5 7 7-7 7" />,
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="3" />
+        <path d="M7 3v4M17 3v4M3 11h18M7 15h2m6 0h2M7 18h2" />
+      </>
+    ),
+    arrow: (
+      <>
+        <path d="M5 12h14m-5-5 5 5-5 5" />
+      </>
+    ),
+    grid: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="2" />
+        <rect x="14" y="3" width="7" height="7" rx="2" />
+        <rect x="3" y="14" width="7" height="7" rx="2" />
+        <rect x="14" y="14" width="7" height="7" rx="2" />
+      </>
+    ),
+    star: (
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+    ),
+    settings: (
+      <>
+        <path d="m9 3-.5 3-2 .9L4 6l-2 4 2.5 2L4 15l2 3 3-.5 2 2.5h3l1.5-3 3-.5 2-3-2-2 .5-3-3-2-2 .5L13 3H9Z" />
+        <circle cx="11.5" cy="11.5" r="3" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01" />
+      </>
+    ),
+    bell: (
+      <>
+        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+      </>
+    ),
+    close: <path d="m6 6 12 12M6 18 18 6" />,
+    check: <path d="m5 12 4 4L19 6" />,
+    refresh: (
+      <>
+        <path d="M20 7v5h-5M4 17v-5h5" />
+        <path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z" />
+        <path d="m8 12 3 3 5-5" />
+      </>
+    ),
+    external: (
+      <>
+        <path d="M14 3h7v7m0-7L10 14M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+      </>
+    ),
+    more: (
+      <>
+        <circle cx="5" cy="12" r="1" />
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+      </>
+    ),
+    file: (
+      <>
+        <path d="M14 3H5v18h14V8l-5-5Zm0 0v5h5M8 12h8M8 16h5" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M9 4H4v16h5m4-13 5 5-5 5m-5-5h10" />
+      </>
+    ),
+  }
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  )
+}
+
+type Email = {
+  id: string | number
+  sender: string
+  address: string
+  initials: string
+  color: string
+  subject: string
+  preview: string
+  body: string
+  bodyHtml?: string | null
+  category: string
+  date: string
+  time: string
+  unread: boolean
+  action?: string
+}
+
+type GmailApiEmail = {
+  id: string
+  received_at: string
+  from: string | null
+  subject: string | null
+  snippet: string | null
+  body_text?: string | null
+  body_html?: string | null
+  label_ids: string[]
+}
+
+type FetchJob = {
+  status: "fetching" | "completed" | "failed"
+  completed: number
+  total: number
+  phase: string
+  messages?: GmailApiEmail[]
+  cached_count: number
+  fetched_count: number
+  error?: string
+}
+
+type AiAnalysis = {
+  id: string
+  summary: string
+  important: string[]
+  actions: string[]
+  deadlines: string[]
+}
+
+const avatarColors = ["purple", "violet", "blue", "rose", "teal", "orange"]
+
+function toLocalInputValue(date: Date) {
+  const offset = date.getTimezoneOffset() * 60_000
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+}
+
+function toEmail(message: GmailApiEmail, index: number): Email {
+  const sender = message.from?.replace(/\s*<[^>]+>/, "") || "Unknown sender"
+  const address = message.from?.match(/<([^>]+)>/)?.[1] || message.from || ""
+  const initials = sender
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase()
+  const labels = new Set(message.label_ids)
+  const category = labels.has("CATEGORY_PROMOTIONS")
+    ? "Promotions"
+    : labels.has("CATEGORY_UPDATES")
+      ? "Updates"
+      : "Work"
+  const receivedAt = new Date(message.received_at)
+  return {
+    id: message.id,
+    sender,
+    address,
+    initials: initials || "?",
+    color: avatarColors[index % avatarColors.length],
+    subject: message.subject || "(No subject)",
+    preview: message.snippet || "",
+    body: message.body_text || message.snippet || "",
+    bodyHtml: message.body_html || null,
+    category,
+    date: message.received_at,
+    time: receivedAt.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }),
+    unread: labels.has("UNREAD"),
+  }
+}
+const EMAILS: Email[] = [
+  {
+    id: 1,
+    sender: "Olivia Rhye",
+    address: "olivia@acme.studio",
+    initials: "OR",
+    color: "purple",
+    subject: "Website redesign — ready for your review",
+    preview:
+      "Hey Alex, the latest designs are ready. Would love your thoughts…",
+    body: "Hey Alex,\n\nThe latest website redesign is ready for your review. We’ve incorporated the feedback from our last session and refined the homepage and product pages.\n\nCould you share your feedback by Wednesday? Once we have your approval, the engineering team can start the handoff.\n\nThanks,\nOlivia",
+    category: "Work",
+    date: "2025-06-16",
+    time: "10:42 AM",
+    unread: true,
+    action:
+      "Review the website redesign and send Olivia your feedback by Wednesday.",
+  },
+  {
+    id: 2,
+    sender: "Linear",
+    address: "notifications@linear.app",
+    initials: "L",
+    color: "violet",
+    subject: "Your weekly workspace digest",
+    preview: "Here’s what happened in your workspace this week. 12 issues…",
+    body: "Your weekly workspace digest\n\nYour team completed 12 issues, started 3 projects, and shipped the new onboarding flow. There are 4 issues assigned to you awaiting review.\n\nVisit your workspace to catch up with the team.",
+    category: "Updates",
+    date: "2025-06-16",
+    time: "9:15 AM",
+    unread: true,
+  },
+  {
+    id: 3,
+    sender: "James Wilson",
+    address: "james@acme.studio",
+    initials: "JW",
+    color: "blue",
+    subject: "Quick sync on the Q3 roadmap?",
+    preview:
+      "Hi Alex, can we find 30 minutes this week to align on priorities?",
+    body: "Hi Alex,\n\nCan we find 30 minutes this week to align on our Q3 priorities? I’d like to discuss the analytics dashboard, customer onboarding, and the mobile release.\n\nI’m free Tuesday at 2 PM or Thursday at 10 AM. Let me know what works for you.\n\nBest,\nJames",
+    category: "Work",
+    date: "2025-06-15",
+    time: "Jun 15",
+    unread: true,
+    action:
+      "Confirm a 30-minute roadmap sync with James: Tuesday at 2 PM or Thursday at 10 AM.",
+  },
+  {
+    id: 4,
+    sender: "Notion",
+    address: "team@makenotion.com",
+    initials: "N",
+    color: "neutral",
+    subject: "A little more focus. A lot more possibility.",
+    preview:
+      "Meet the new features designed to help your team do its best work.",
+    body: "Meet the new features designed to help your team do its best work.\n\nDiscover connected projects, improved search, and a simpler calendar experience. Read our latest product update for a full overview.",
+    category: "Promotions",
+    date: "2025-06-15",
+    time: "Jun 15",
+    unread: false,
+  },
+  {
+    id: 5,
+    sender: "Sarah Chen",
+    address: "sarah@acme.studio",
+    initials: "SC",
+    color: "rose",
+    subject: "June invoice & project summary",
+    preview: "Attached is the invoice for this month along with a quick recap…",
+    body: "Hi Alex,\n\nHere is the invoice for June, totaling $2,400, along with a quick recap of the work completed: design system updates, dashboard wireframes, and usability testing.\n\nPlease arrange payment by June 25. Let me know if you have any questions.\n\nThank you,\nSarah",
+    category: "Finance",
+    date: "2025-06-14",
+    time: "Jun 14",
+    unread: false,
+    action: "Arrange payment of Sarah’s $2,400 June invoice by June 25.",
+  },
+  {
+    id: 6,
+    sender: "Figma",
+    address: "team@figma.com",
+    initials: "F",
+    color: "orange",
+    subject: "Your next great idea starts here",
+    preview: "A few things to inspire your next project. Explore what’s new…",
+    body: "A few things to inspire your next project.\n\nExplore our latest community resources, learn from fellow designers, and discover new ways to bring your ideas to life with Figma.",
+    category: "Updates",
+    date: "2025-06-13",
+    time: "Jun 13",
+    unread: false,
+  },
+  {
+    id: 7,
+    sender: "Michael Foster",
+    address: "michael@acme.studio",
+    initials: "MF",
+    color: "teal",
+    subject: "Re: Customer interview notes",
+    preview: "Thanks for pulling these together. A few interesting patterns…",
+    body: "Hey Alex,\n\nThanks for pulling these customer interview notes together. A few interesting patterns stood out: users want faster onboarding, clearer analytics, and better export options.\n\nLet’s include these insights in the next product planning session.\n\nCheers,\nMichael",
+    category: "Work",
+    date: "2025-06-12",
+    time: "Jun 12",
+    unread: false,
+  },
+  {
+    id: 8,
+    sender: "Stripe",
+    address: "receipts@stripe.com",
+    initials: "S",
+    color: "violet",
+    subject: "Your receipt from Framer",
+    preview:
+      "Your payment of $20.00 to Framer has been processed successfully.",
+    body: "Your payment has been processed successfully.\n\nMerchant: Framer\nAmount: $20.00\nDate: June 11, 2025\nPlan: Monthly subscription\n\nKeep this receipt for your records.",
+    category: "Finance",
+    date: "2025-06-11",
+    time: "Jun 11",
+    unread: false,
+  },
+]
+const categories = ["All emails", "Work", "Updates", "Promotions", "Finance"]
+const dateLabel = (date: string) =>
+  new Date(date).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+
+export default function App() {
+  const [page, setPage] = useState("Inbox")
+  const [query, setQuery] = useState("")
+  const [category, setCategory] = useState("All emails")
+  const [start, setStart] = useState(() => toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
+  const [end, setEnd] = useState(() => toLocalInputValue(new Date()))
+  const [range, setRange] = useState(() => ({ start: toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)), end: toLocalInputValue(new Date()) }))
+  const [emails, setEmails] = useState<Email[]>([])
+  const [fetching, setFetching] = useState(false)
+  const [fetchProgress, setFetchProgress] = useState({ completed: 0, total: 0, phase: "" })
+  const [selected, setSelected] = useState<(string | number)[]>([])
+  const [stars, setStars] = useState<(string | number)[]>([])
+  const [read, setRead] = useState<(string | number)[]>([])
+  const [activeEmail, setActiveEmail] = useState<Email | null>(null)
+  const [analyzed, setAnalyzed] = useState<AiAnalysis[]>([])
+  const [analyzing, setAnalyzing] = useState(false)
+  const [notice, setNotice] = useState("")
+  const [modal, setModal] = useState<"settings" | "help" | null>(null)
+  const [dateMenu, setDateMenu] = useState(false)
+  const fetched = emails
+  const visible = fetched.filter(
+    (e) =>
+      (page !== "Starred" || stars.includes(e.id)) &&
+      (category === "All emails" || e.category === category) &&
+      `${e.sender} ${e.subject} ${e.preview}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+  )
+  const unread = fetched.filter((e) => e.unread && !read.includes(e.id)).length
+  function notify(message: string) {
+    setNotice(message)
+    window.setTimeout(() => setNotice(""), 4500)
+  }
+  async function fetchEmails(forceRefresh = false) {
+    if (!start || !end || start > end) {
+      notify(
+        "Choose a valid date range. The start date must come before the end date.",
+      )
+      return
+    }
+    setFetching(true)
+    setFetchProgress({ completed: 0, total: 0, phase: "Checking local cache" })
+    try {
+      const response = await fetch("/api/fetch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          start: new Date(start).toISOString(),
+          end: new Date(end).toISOString(),
+          force_refresh: forceRefresh,
+        }),
+      })
+      const started = (await response.json()) as { job_id?: string; error?: string }
+      if (!response.ok || !started.job_id) {
+        throw new Error(started.error || "Gmail could not start the fetch.")
+      }
+      const result = await waitForFetch(started.job_id)
+      if (result.status === "failed" || !result.messages) {
+        throw new Error(result.error || "Gmail could not return messages.")
+      }
+      setEmails(result.messages.map(toEmail))
+      setRange({ start, end })
+      setSelected([])
+      notify(
+        result.fetched_count
+          ? `Updated ${result.fetched_count} emails from Gmail.`
+          : `Loaded ${result.cached_count} emails from local cache.`,
+      )
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not fetch Gmail messages.")
+    } finally {
+      setFetching(false)
+    }
+  }
+  async function waitForFetch(jobId: string): Promise<FetchJob> {
+    while (true) {
+      const response = await fetch(`/api/fetch/${jobId}`)
+      const result = (await response.json()) as FetchJob
+      if (!response.ok) {
+        throw new Error(result.error || "Could not read fetch progress.")
+      }
+      setFetchProgress({
+        completed: result.completed,
+        total: result.total,
+        phase: result.phase,
+      })
+      if (result.status !== "fetching") {
+        return result
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 350))
+    }
+  }
+  async function analyze(emailsToAnalyze: Email[]) {
+    if (!emailsToAnalyze.length) {
+      notify("Select at least one email to analyze.")
+      return
+    }
+    setAnalyzing(true)
+    setActiveEmail(null)
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emails: emailsToAnalyze.map((email) => ({
+            id: email.id,
+            subject: email.subject,
+            sender: email.address || email.sender,
+            body: email.body,
+          })),
+        }),
+      })
+      const result = (await response.json()) as { analyses?: AiAnalysis[]; error?: string }
+      if (!response.ok || !result.analyses) throw new Error(result.error || "Local AI could not analyze these emails.")
+      setAnalyzed(result.analyses)
+      setPage("AI analyses")
+      notify(`Analyzed ${result.analyses.length} email${result.analyses.length === 1 ? "" : "s"} locally.`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Local AI could not analyze these emails.")
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+  function toggleSelected(id: string | number) {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+  function toggleStar(id: string | number) {
+    setStars((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
+  }
+  const allSelected =
+    visible.length > 0 && visible.every((e) => selected.includes(e.id))
+  const progressPercent = fetchProgress.total
+    ? Math.min(100, Math.round((fetchProgress.completed / fetchProgress.total) * 100))
+    : 0
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a
+          className="brand"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
+            setPage("Inbox")
+          }}
+        >
+          <span className="brand-mark">
+            <Icon name="mail" size={23} />
+          </span>
+          Mailsage<span className="brand-dot"></span>
+        </a>
+        <div className="workspace">
+          <span className="workspace-avatar">PS</span>
+          <div>
+            <strong>Piyush’s workspace</strong>
+            <span>Personal account</span>
+          </div>
+          <Icon name="chevron" size={15} className="rotate-down" />
+        </div>
+        <div className="nav-label">WORKSPACE</div>
+        <nav>
+          {([
+            { label: "Inbox", icon: "mail" },
+            { label: "AI analyses", icon: "sparkles" },
+            { label: "Starred", icon: "star" },
+          ] as const).map((item) => (
+            <button
+              key={item.label}
+              className={`nav-item ${page === item.label ? "active" : ""}`}
+              onClick={() => {
+                setPage(item.label)
+                setCategory("All emails")
+                setQuery("")
+              }}
+            >
+              <Icon name={item.icon} size={19} />
+              <span>{item.label}</span>
+              {item.label === "Inbox" && (
+                <span className="nav-count">{fetched.length}</span>
+              )}
+              {item.label === "AI analyses" && <span className="new-badge">AI</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="connection-card">
+            <span className="connection-icon">
+              <Icon name="shield" size={19} />
+            </span>
+            <strong>Your inbox, only smarter.</strong>
+            <p>You’re in control of what you share with AI. Always.</p>
+            <button onClick={() => setModal("help")}>
+              Learn how it works <Icon name="arrow" size={15} />
+            </button>
+          </div>
+          <button className="nav-item" onClick={() => setModal("settings")}>
+            <Icon name="settings" size={19} />
+            Settings
+          </button>
+          <button className="nav-item" onClick={() => setModal("help")}>
+            <Icon name="help" size={19} />
+            Help & getting started
+            <Icon name="external" size={13} />
+          </button>
+          <div className="profile">
+            <span className="profile-avatar">PS</span>
+            <div>
+              <strong>Piyush Singh</strong>
+              <span>piyushgtr1915@gmail.com</span>
+            </div>
+            <button
+              className="icon-button"
+              aria-label="Account settings"
+              onClick={() => setModal("settings")}
+            >
+              <Icon name="more" size={18} />
+            </button>
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="breadcrumb">
+            Workspace <Icon name="chevron" size={14} />
+            <span>{page}</span>
+          </div>
+          <div className="topbar-actions">
+            <span className="demo-badge">
+              <span />
+              Demo workspace
+            </span>
+            <button
+              className="icon-button"
+              aria-label="Help"
+              onClick={() => setModal("help")}
+            >
+              <Icon name="help" size={19} />
+            </button>
+            <button
+              className="icon-button notification-button"
+              aria-label="Notifications"
+              onClick={() =>
+                notify("You’re all caught up. No new notifications.")
+              }
+            >
+              <Icon name="bell" size={19} />
+              <i />
+            </button>
+            <span className="profile-avatar small">AL</span>
+          </div>
+        </header>
+        <main>
+          <div className="page-heading">
+            <div>
+              <div className="eyebrow">A LITTLE CLARITY FOR YOUR INBOX</div>
+              <h1>
+                {page === "Inbox"
+                  ? "Your inbox, in focus."
+                  : page === "AI analyses"
+                    ? "Your AI insights, in one place."
+                    : "The emails worth keeping."}
+              </h1>
+              <p>
+                Fetch the messages you need and keep the important ones close.
+              </p>
+            </div>
+            <button
+              className="button secondary connect-button"
+              onClick={() => setModal("settings")}
+            >
+              <GmailMark />
+              <span>Connect Gmail</span>
+              <Icon name="external" size={14} />
+            </button>
+          </div>
+          <section className="fetch-card" aria-label="Fetch emails by date">
+            <div className="fetch-title">
+              <span className="surface-icon">
+                <Icon name="calendar" size={21} />
+              </span>
+              <div>
+                <h2>Start with a time frame</h2>
+                <p>Choose a date range to fetch your emails.</p>
+              </div>
+            </div>
+            <div className="date-controls">
+              <label className="date-field">
+                <span>From</span>
+                <input
+                  aria-label="Start date"
+                  type="datetime-local"
+                  value={start}
+                  onChange={(e) => setStart(e.target.value)}
+                />
+              </label>
+              <span className="date-divider">–</span>
+              <label className="date-field">
+                <span>To</span>
+                <input
+                  aria-label="End date"
+                  type="datetime-local"
+                  value={end}
+                  onChange={(e) => setEnd(e.target.value)}
+                />
+              </label>
+              <div className="date-preset-wrap">
+                <button
+                  className="preset-button"
+                  onClick={() => setDateMenu(!dateMenu)}
+                >
+                  Last 7 days
+                  <Icon name="chevron" size={13} className="rotate-down" />
+                </button>
+                {dateMenu && (
+                  <div className="preset-menu">
+                    {[7, 14, 30].map((days) => (
+                      <button
+                        key={days}
+                        onClick={() => {
+                          const now = new Date()
+                          const earlier = new Date(now.getTime() - days * 24 * 60 * 60 * 1000)
+                          setStart(toLocalInputValue(earlier))
+                          setEnd(toLocalInputValue(now))
+                          setDateMenu(false)
+                        }}
+                      >
+                        Last {days} days
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                className="button primary"
+                onClick={() => fetchEmails()}
+                disabled={fetching}
+              >
+                <Icon
+                  name={fetching ? "refresh" : "mail"}
+                  size={17}
+                  className={fetching ? "spinning" : ""}
+                />
+                {fetching ? "Fetching…" : "Fetch emails"}
+              </button>
+              <button
+                className="button secondary refresh-button"
+                onClick={() => fetchEmails(true)}
+                disabled={fetching}
+                title="Fetch this time range from Gmail again"
+              >
+                <Icon name="refresh" size={16} />
+                Fetch again
+              </button>
+              <button
+                className="button secondary"
+                onClick={() => analyze(fetched.filter((email) => selected.includes(email.id)))}
+                disabled={!selected.length || analyzing}
+              >
+                <Icon name="sparkles" size={16} />
+                Analyze with AI
+              </button>
+            </div>
+          </section>
+          {fetching && (
+            <div className="fetch-progress" role="status" aria-live="polite">
+              <div className="fetch-progress-label">
+                <span>{fetchProgress.phase}</span>
+                <strong>
+                  {fetchProgress.total
+                    ? `${fetchProgress.completed} of ${fetchProgress.total} emails`
+                    : "Preparing your fetch"}
+                </strong>
+              </div>
+              <div className="fetch-progress-track" aria-hidden="true">
+                <span style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+          )}
+          <div className="stats-grid">
+            <Stat
+              icon="mail"
+              label="Emails fetched"
+              value={fetched.length}
+              detail="In your selected time frame"
+              color="green"
+            />
+            <Stat
+              icon="mail"
+              label="Unread emails"
+              value={unread}
+              detail="A few things to catch up on"
+              color="blue"
+            />
+            <Stat
+              icon="check"
+              label="Selected emails"
+              value={selected.length}
+              detail="Ready for your review"
+              color="purple"
+            />
+          </div>
+          <div className="inbox-layout">
+            <section className="inbox-card">
+              <div className="inbox-title">
+                <div>
+                  <h2>
+                    {page === "Starred"
+                        ? "Starred emails"
+                        : "Fetched emails"}{" "}
+                    <span className="count-pill">
+                      {visible.length}
+                    </span>
+                  </h2>
+                  <p>
+                    {dateLabel(range.start)} <span>–</span>{" "}
+                    {dateLabel(range.end)}
+                  </p>
+                </div>
+                <button
+                  className="icon-button"
+                  aria-label="Refresh emails"
+                  onClick={() => fetchEmails(true)}
+                >
+                  <Icon
+                    name="refresh"
+                    size={17}
+                    className={fetching ? "spinning" : ""}
+                  />
+                </button>
+              </div>
+              <div className="email-toolbar">
+                <div className="tabs">
+                  {categories.map((c) => (
+                    <button
+                      key={c}
+                      className={category === c ? "selected" : ""}
+                      onClick={() => setCategory(c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <div className="search-field">
+                  <Icon name="search" size={16} />
+                  <input
+                    aria-label="Search emails"
+                    placeholder="Search emails…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <span>⌘ K</span>
+                </div>
+              </div>
+              <div className="table-head">
+                <label className="select-all">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all emails"
+                    checked={allSelected}
+                    onChange={() =>
+                      setSelected(allSelected ? [] : visible.map((e) => e.id))
+                    }
+                  />
+                  <span>
+                    {selected.length ? `${selected.length} selected` : "Email"}
+                  </span>
+                </label>
+              </div>
+              <div className="email-list">
+                {visible.map((email) => (
+                  <div
+                    className={`email-row ${
+                      selected.includes(email.id) ? "is-selected" : ""
+                    }`}
+                    key={email.id}
+                  >
+                    <input
+                      type="checkbox"
+                      aria-label={`Select email from ${email.sender}`}
+                      checked={selected.includes(email.id)}
+                      onChange={() => toggleSelected(email.id)}
+                    />
+                    <span className={`sender-avatar ${email.color}`}>
+                      {email.initials}
+                    </span>
+                    <button
+                      className="email-content"
+                      onClick={() => {
+                        setActiveEmail(email)
+                        setRead((prev) => [...prev, email.id])
+                      }}
+                    >
+                      <div className="sender-line">
+                        <strong>{email.sender}</strong>
+                        {email.unread && !read.includes(email.id) && (
+                          <span className="unread-dot" />
+                        )}
+                        <span
+                          className={`category-badge ${email.category.toLowerCase()}`}
+                        >
+                          {email.category}
+                        </span>
+                      </div>
+                      <div
+                        className={`email-subject ${
+                          email.unread && !read.includes(email.id)
+                            ? "unread"
+                            : ""
+                        }`}
+                      >
+                        {email.subject}
+                      </div>
+                      <p>{email.preview}</p>
+                    </button>
+                    <div className="email-end">
+                      <span className="email-time">{email.time}</span>
+                      <div className="row-actions">
+                        <button
+                          className={`icon-button star-button ${
+                            stars.includes(email.id) ? "starred" : ""
+                          }`}
+                          aria-label={`${
+                            stars.includes(email.id) ? "Unstar" : "Star"
+                          } email from ${email.sender}`}
+                          onClick={() => toggleStar(email.id)}
+                        >
+                          <Icon name="star" size={15} />
+                        </button>
+                        <button
+                          className="email-ai"
+                          aria-label={`Analyze email from ${email.sender}`}
+                          title="Analyze with local AI"
+                          onClick={() => analyze([email])}
+                        >
+                          <Icon name="sparkles" size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {!visible.length && (
+                  <div className="empty-state">
+                    <Icon name="mail" size={30} />
+                    <h3>No emails found</h3>
+                    <p>Try a different search, category, or time range.</p>
+                  </div>
+                )}
+              </div>
+              <div className="table-footer">
+                <span>
+                  Showing{" "}
+                  {visible.length}{" "}
+                  of {fetched.length} emails
+                </span>
+                <span>
+                  <span className="tiny-dot" />
+                  All caught up
+                </span>
+              </div>
+            </section>
+            <aside className="ai-panel">
+              <div className="ai-panel-heading">
+                <span className="ai-icon">
+                  <Icon name="sparkles" size={20} />
+                </span>
+                <h2>Your AI copilot</h2>
+                <span className="beta-badge">BETA</span>
+              </div>
+              {analyzing ? (
+                <div className="ai-welcome">
+                  <div className="orb spinning">
+                    <Icon name="sparkles" size={32} />
+                  </div>
+                  <h3>Connecting the dots…</h3>
+                  <p>Preparing your demo summary and next steps.</p>
+                </div>
+              ) : analyzed.length ? (
+                <div className="analysis-result">
+                  <span className="result-kicker">
+                    <Icon name="check" size={14} />
+                    LOCAL ANALYSIS COMPLETE
+                  </span>
+                  <h3>A clearer picture.</h3>
+                  <p className="result-count">
+                    Based on {analyzed.length}{" "}
+                    {analyzed.length === 1 ? "email" : "emails"} you shared.
+                  </p>
+                  <h4>At a glance</h4>
+                  {analyzed.map((analysis) => (
+                    <div className="summary-item" key={analysis.id}>
+                      <strong>{fetched.find((email) => String(email.id) === analysis.id)?.sender || "Email"}</strong>
+                      <p>{analysis.summary}</p>
+                      {analysis.important.map((fact) => <p key={fact}>• {fact}</p>)}
+                    </div>
+                  ))}
+                  <h4>Next steps</h4>
+                  {analyzed.some((analysis) => analysis.actions.length || analysis.deadlines.length) ? (
+                    analyzed.flatMap((analysis) => [...analysis.actions, ...analysis.deadlines]).map((action, index) => (
+                        <div className="action-item" key={`${action}-${index}`}>
+                          <Icon name="check" size={15} />
+                          <p>{action}</p>
+                        </div>
+                      ))
+                  ) : (
+                    <p className="no-actions">
+                      No immediate action needed. You’re all caught up.
+                    </p>
+                  )}
+                  <button
+                    className="button secondary full-width"
+                    onClick={() => {
+                      setAnalyzed([])
+                      setPage("Inbox")
+                    }}
+                  >
+                    Clear analysis
+                  </button>
+                  <p className="demo-disclaimer">
+                    Local demo summary · No content was sent to an AI service.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="ai-welcome">
+                    <div className="orb">
+                      <Icon name="sparkles" size={35} />
+                    </div>
+                    <span className="mini-spark one" aria-hidden="true">
+                      <Icon name="sparkles" size={14} />
+                    </span>
+                    <span className="mini-spark two" aria-hidden="true">
+                      <Icon name="sparkles" size={9} />
+                    </span>
+                    <h3>
+                      Less inbox.
+                      <br />
+                      More insight.
+                    </h3>
+                    <p>
+                      Your emails have a story to tell.
+                      <br />
+                      Let’s find the important parts.
+                    </p>
+                  </div>
+                  <div className="ai-features">
+                    <div>
+                      <span className="feature-icon">
+                        <Icon name="file" size={16} />
+                      </span>
+                      <div>
+                        <strong>Get the bigger picture</strong>
+                        <p>Quick summaries, without the scroll.</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="feature-icon">
+                        <Icon name="check" size={17} />
+                      </span>
+                      <div>
+                        <strong>Find your next steps</strong>
+                        <p>Turn conversations into action.</p>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="feature-icon">
+                        <Icon name="grid" size={16} />
+                      </span>
+                      <div>
+                        <strong>Connect the dots</strong>
+                        <p>Spot themes across your emails.</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="ai-tip">
+                    <span className="tip-spark">
+                      <Icon name="sparkles" size={16} />
+                    </span>
+                    <p>
+                      Click the <strong>sparkle icon</strong> on any email, or
+                      select a few to analyze together.
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className="ai-privacy">
+                <Icon name="shield" size={14} />
+                <span>Only the emails you choose. Always.</span>
+              </div>
+            </aside>
+          </div>
+          <footer className="page-footer">
+            <span>Made for a calmer, clearer inbox.</span>
+            <span>
+              <Icon name="shield" size={13} />
+              Your data stays yours.
+            </span>
+          </footer>
+        </main>
+      </div>
+      {notice && (
+        <div className="toast" role="status">
+          <Icon name="check" size={18} />
+          <span>{notice}</span>
+          <button
+            className="icon-button"
+            aria-label="Dismiss notification"
+            onClick={() => setNotice("")}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </div>
+      )}
+      {(activeEmail || modal) && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            setActiveEmail(null)
+            setModal(null)
+          }}
+        >
+          <section
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label={
+              activeEmail
+                ? activeEmail.subject
+                : modal === "settings"
+                  ? "Account settings"
+                  : "Getting started"
+            }
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close icon-button"
+              aria-label="Close dialog"
+              onClick={() => {
+                setActiveEmail(null)
+                setModal(null)
+              }}
+            >
+              <Icon name="close" />
+            </button>
+            {activeEmail ? (
+              <>
+                <span
+                  className={`category-badge ${activeEmail.category.toLowerCase()}`}
+                >
+                  {activeEmail.category}
+                </span>
+                <h2>{activeEmail.subject}</h2>
+                <div className="modal-sender">
+                  <span className={`sender-avatar ${activeEmail.color}`}>
+                    {activeEmail.initials}
+                  </span>
+                  <div>
+                    <strong>{activeEmail.sender}</strong>
+                    <p>{activeEmail.address}</p>
+                  </div>
+                  <span>{dateLabel(activeEmail.date)}</span>
+                </div>
+                {activeEmail.bodyHtml ? (
+                  <div
+                    className="email-body email-html"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(activeEmail.bodyHtml, {
+                        USE_PROFILES: { html: true },
+                        ADD_ATTR: ["target"],
+                      }),
+                    }}
+                  />
+                ) : (
+                  <div className="email-body">{activeEmail.body}</div>
+                )}
+                <div className="modal-bottom">
+                  <span>
+                    <Icon name="shield" size={15} />
+                    Gmail data stays on this device
+                  </span>
+                  <button className="button primary" onClick={() => analyze([activeEmail])}>
+                    <Icon name="sparkles" size={17} />
+                    Analyze with AI
+                  </button>
+                </div>
+              </>
+            ) : modal === "settings" ? (
+              <>
+                <span className="surface-icon">
+                  <GmailMark />
+                </span>
+                <h2>Connect your Gmail</h2>
+                <p className="modal-description">
+                  Fetching opens the Google sign-in page the first time. Your
+                  Gmail token is stored locally and uses read-only access.
+                </p>
+                <div className="integration-status">
+                  <span className="tiny-dot" />
+                  Demo mode · No Google account connected
+                </div>
+                <h3>Designed with your privacy in mind</h3>
+                <p className="modal-description">
+                  This app analyzes only emails you choose with the local Qwen
+                  model. No content is sent to an AI service.
+                </p>
+                <button
+                  className="button primary full-width"
+                  onClick={() => {
+                    setModal(null)
+                    notify("Choose a time range and fetch your Gmail messages.")
+                  }}
+                >
+                  Choose a time range
+                  <Icon name="arrow" size={16} />
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="ai-icon">
+                  <Icon name="sparkles" />
+                </span>
+                <h2>A calmer inbox starts here.</h2>
+                <div className="help-step">
+                  <span>1</span>
+                  <div>
+                    <h3>Choose your time frame</h3>
+                    <p>
+                      Pick a date range and click Fetch emails. Demo emails are
+                      available June 11–16, 2025.
+                    </p>
+                  </div>
+                </div>
+                <div className="help-step">
+                  <span>2</span>
+                  <div>
+                    <h3>Find what matters</h3>
+                    <p>
+                      Search, filter by category, star an email, or open it to
+                      read the full conversation.
+                    </p>
+                  </div>
+                </div>
+                <div className="help-step">
+                  <span>3</span>
+                  <div>
+                    <h3>Read an email</h3>
+                    <p>
+                      Click an email’s sparkle icon or select multiple emails to
+                      see a local demo summary and action items. No data leaves
+                      this app.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className="button primary full-width"
+                  onClick={() => setModal(null)}
+                >
+                  Got it. Let’s explore
+                  <Icon name="arrow" size={16} />
+                </button>
+              </>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  )
+}
+function Stat({
+  icon,
+  label,
+  value,
+  detail,
+  color,
+}: {
+  icon: IconName
+  label: string
+  value: number
+  detail: string
+  color: string
+}) {
+  return (
+    <div className="stat-card">
+      <div className="stat-top">
+        <span>{label}</span>
+        <span className={`stat-icon ${color}`}>
+          <Icon name={icon} size={18} />
+        </span>
+      </div>
+      <div className="stat-value">
+        {value}
+        <span className="stat-detail">{detail}</span>
+      </div>
+    </div>
+  )
+}
+function GmailMark() {
+  return (
+    <svg
+      width="19"
+      height="17"
+      viewBox="0 0 24 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M2 18V5l10 7 10-7v13"
+        stroke="#4285F4"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path d="M2 5v13" stroke="#34A853" strokeWidth="4" />
+      <path
+        d="m2 5 10 7L22 5"
+        stroke="#EA4335"
+        strokeWidth="4"
+        strokeLinejoin="round"
+      />
+      <path d="M22 5v13" stroke="#FBBC04" strokeWidth="4" />
+    </svg>
+  )
+}
