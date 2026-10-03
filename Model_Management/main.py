@@ -7,6 +7,7 @@ Example:
 from __future__ import annotations
 
 import argparse
+from html.parser import HTMLParser
 import json
 import sys
 from pathlib import Path
@@ -30,6 +31,80 @@ Use this exact structure:
   "deadlines": ["explicit date, time, or deadline"]
 }
 Use empty arrays where no facts apply."""
+
+SUMMARY_RESPONSE_FORMAT = {
+    "type": "json_object",
+    "schema": {
+        "type": "object",
+        "properties": {
+            "summary": {"type": "string"},
+            "important": {"type": "array", "items": {"type": "string"}},
+            "actions": {"type": "array", "items": {"type": "string"}},
+            "deadlines": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": ["summary", "important", "actions", "deadlines"],
+        "additionalProperties": False,
+    },
+}
+
+
+class _ReadableEmailHTML(HTMLParser):
+    _BLOCK_TAGS = {
+        "address", "article", "aside", "blockquote", "br", "dd", "div", "dl",
+        "dt", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2",
+        "h3", "h4", "h5", "h6", "header", "hr", "li", "main", "nav", "ol",
+        "p", "section", "table", "tr", "ul",
+    }
+    _HIDDEN_TAGS = {"head", "script", "style", "noscript"}
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.parts: list[str] = []
+        self._hidden_depth = 0
+
+    def handle_starttag(
+        self, tag: str, _attrs: list[tuple[str, str | None]]
+    ) -> None:
+        del _attrs
+        if tag in self._HIDDEN_TAGS:
+            self._hidden_depth += 1
+        elif not self._hidden_depth and tag in self._BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._HIDDEN_TAGS and self._hidden_depth:
+            self._hidden_depth -= 1
+        elif not self._hidden_depth and tag in self._BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data: str) -> None:
+        if not self._hidden_depth:
+            self.parts.append(data)
+
+
+def select_email_body(
+    body_text: Any, body_html: Any, snippet: Any
+) -> tuple[str, str]:
+    """Choose the full email body, converting HTML to readable text as needed."""
+    if isinstance(body_text, str) and body_text.strip():
+        return body_text, "body_text"
+
+    if isinstance(body_html, str) and body_html.strip():
+        parser = _ReadableEmailHTML()
+        parser.feed(body_html)
+        parser.close()
+        readable_text = "\n".join(
+            line.strip()
+            for line in "".join(parser.parts).splitlines()
+            if line.strip()
+        )
+        if readable_text:
+            return readable_text, "body_html (HTML converted to text)"
+
+    if isinstance(snippet, str) and snippet.strip():
+        return snippet, "snippet (full body unavailable)"
+
+    raise ValueError("The selected email has no body_text, readable body_html, or snippet.")
 
 
 def create_model() -> Llama:
@@ -81,7 +156,7 @@ def stream_email_summary(
         ],
         temperature=0.1,
         max_tokens=350,
-        response_format={"type": "json_object"},
+        response_format=SUMMARY_RESPONSE_FORMAT,
         stream=True,
     )
     for chunk in response:

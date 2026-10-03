@@ -18,26 +18,29 @@ from typing import Any, Iterator
 from llama_cpp import Llama
 
 try:
-    from .main import SYSTEM_PROMPT, create_model, email_to_message
+    from .main import (
+        SUMMARY_RESPONSE_FORMAT,
+        SYSTEM_PROMPT,
+        create_model,
+        email_to_message,
+        select_email_body,
+    )
     from .model_config import PROJECT_ROOT
 except ImportError:  # Allows both `python model_prompt_check.py` and package imports.
-    from main import SYSTEM_PROMPT, create_model, email_to_message
+    from main import (
+        SUMMARY_RESPONSE_FORMAT,
+        SYSTEM_PROMPT,
+        create_model,
+        email_to_message,
+        select_email_body,
+    )
     from model_config import PROJECT_ROOT
 
 
 def _email_body(email: dict[str, Any]) -> tuple[str, str]:
-    body_text = email.get("body_text")
-    if isinstance(body_text, str) and body_text:
-        body, source = body_text, "body_text"
-    else:
-        snippet = email.get("snippet")
-        if not isinstance(snippet, str) or not snippet:
-            raise ValueError("The selected email has no body_text or snippet.")
-        body, source = snippet, "snippet"
-
-    if not body.strip():
-        raise ValueError("The selected email body is empty.")
-    return body, source
+    return select_email_body(
+        email.get("body_text"), email.get("body_html"), email.get("snippet")
+    )
 
 
 def _website_sender(email: dict[str, Any]) -> str:
@@ -91,7 +94,7 @@ def stream_raw_response(
         ],
         temperature=0.1,
         max_tokens=350,
-        response_format={"type": "json_object"},
+        response_format=SUMMARY_RESPONSE_FORMAT,
         stream=True,
     )
     for chunk in response:

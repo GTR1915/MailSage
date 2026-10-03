@@ -140,7 +140,9 @@ type Email = {
   subject: string
   preview: string
   body: string
+  bodyText?: string | null
   bodyHtml?: string | null
+  snippet?: string | null
   category: string
   date: string
   time: string
@@ -211,7 +213,9 @@ function toEmail(message: GmailApiEmail, index: number): Email {
     subject: message.subject || "(No subject)",
     preview: message.snippet || "",
     body: message.body_text || message.snippet || "",
+    bodyText: message.body_text,
     bodyHtml: message.body_html || null,
+    snippet: message.snippet,
     category,
     date: message.received_at,
     time: receivedAt.toLocaleString([], { dateStyle: "medium", timeStyle: "short" }),
@@ -461,6 +465,9 @@ export default function App() {
             id: email.id,
             subject: email.subject,
             sender: email.address || email.sender,
+            body_text: email.bodyText,
+            body_html: email.bodyHtml,
+            snippet: email.snippet || email.body,
             body: email.body,
           })),
         }),

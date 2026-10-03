@@ -13,7 +13,11 @@ from typing import Any
 
 from gmail_cache import GmailCache, fetch_with_cache
 from gmail_fetch import parse_datetime
-from Model_Management.main import create_model, stream_email_summary
+from Model_Management.main import (
+    create_model,
+    select_email_body,
+    stream_email_summary,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -111,7 +115,7 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
     def _analyze(self) -> None:
         """Stream local model tokens so the browser can reveal summaries early."""
         try:
-            payload = self._read_json()
+            payload = self._read_json(max_bytes=5_000_000)
             emails = payload.get("emails")
             if not isinstance(emails, list) or not emails:
                 raise ValueError("Select at least one email to analyze.")
@@ -122,9 +126,21 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             for email in emails:
                 if not isinstance(email, dict):
                     raise ValueError("Each email must be an object.")
-                body = email.get("body")
-                if not isinstance(body, str) or not body.strip():
-                    raise ValueError("Each selected email needs a body.")
+                for body_field in ("body_text", "body_html", "snippet", "body"):
+                    value = email.get(body_field)
+                    if value is not None and not isinstance(value, str):
+                        raise ValueError(f"Email field '{body_field}' must be text.")
+                try:
+                    body, _ = select_email_body(
+                        email.get("body_text"),
+                        email.get("body_html"),
+                        email.get("snippet"),
+                    )
+                except ValueError:
+                    legacy_body = email.get("body")
+                    if not isinstance(legacy_body, str) or not legacy_body.strip():
+                        raise
+                    body = legacy_body
                 if len(body) > 50_000:
                     raise ValueError("An email body is too large to analyze.")
                 prepared.append({
@@ -204,10 +220,13 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                 job.error = str(error)
                 job.phase = "Fetch failed"
 
-    def _read_json(self) -> dict[str, Any]:
+    def _read_json(self, max_bytes: int = 100_000) -> dict[str, Any]:
         content_length = int(self.headers.get("Content-Length", "0"))
-        if content_length <= 0 or content_length > 100_000:
-            raise ValueError("Request body must be a JSON object smaller than 100 KB.")
+        if content_length <= 0 or content_length > max_bytes:
+            raise ValueError(
+                f"Request body must be a JSON object smaller than {max_bytes // 1_000_000 or max_bytes // 1_000} "
+                f"{'MB' if max_bytes >= 1_000_000 else 'KB'}."
+            )
         payload = json.loads(self.rfile.read(content_length))
         if not isinstance(payload, dict):
             raise ValueError("Request body must be a JSON object.")
