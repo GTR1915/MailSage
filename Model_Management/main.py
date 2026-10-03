@@ -10,7 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from llama_cpp import Llama
 
@@ -57,7 +57,20 @@ def email_to_message(subject: str, sender: str, recipient: str, body: str) -> st
 def summarize_email(
     llm: Llama, subject: str, sender: str, recipient: str, body: str
 ) -> dict[str, Any]:
-    """Return a structured summary using llama.cpp's chat-completion API."""
+    """Return the final structured summary after consuming the token stream."""
+    content = "".join(stream_email_summary(llm, subject, sender, recipient, body))
+    if not content:
+        raise ValueError("The model returned an empty response.")
+    summary = json.loads(content)
+    if not isinstance(summary, dict):
+        raise ValueError("The model response was not a JSON object.")
+    return summary
+
+
+def stream_email_summary(
+    llm: Llama, subject: str, sender: str, recipient: str, body: str
+) -> Iterator[str]:
+    """Yield local-model text as it is generated without changing the prompt."""
     response = llm.create_chat_completion(
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -69,14 +82,15 @@ def summarize_email(
         temperature=0.1,
         max_tokens=350,
         response_format={"type": "json_object"},
+        stream=True,
     )
-    content = response["choices"][0]["message"]["content"]
-    if not content:
-        raise ValueError("The model returned an empty response.")
-    summary = json.loads(content)
-    if not isinstance(summary, dict):
-        raise ValueError("The model response was not a JSON object.")
-    return summary
+    for chunk in response:
+        choices = chunk.get("choices", [])
+        if not choices:
+            continue
+        content = choices[0].get("delta", {}).get("content")
+        if content:
+            yield content
 
 
 def build_parser() -> argparse.ArgumentParser:

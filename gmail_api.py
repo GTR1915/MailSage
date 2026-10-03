@@ -13,7 +13,7 @@ from typing import Any
 
 from gmail_cache import GmailCache, fetch_with_cache
 from gmail_fetch import parse_datetime
-from Model_Management.main import create_model, summarize_email
+from Model_Management.main import create_model, stream_email_summary
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -109,7 +109,7 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
 
     def _analyze(self) -> None:
-        """Summarize explicitly selected emails with the on-device Qwen model."""
+        """Stream local model tokens so the browser can reveal summaries early."""
         try:
             payload = self._read_json()
             emails = payload.get("emails")
@@ -135,27 +135,34 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                     "body": body,
                 })
 
+            self._start_ndjson_stream()
             # llama.cpp model instances are not safe to use concurrently.
             with MODEL_LOCK:
                 model = get_model()
-                results = [
-                    {
-                        "id": email["id"],
-                        **summarize_email(
-                            model,
-                            email["subject"],
-                            email["sender"],
-                            email["recipient"],
-                            email["body"],
-                        ),
-                    }
-                    for email in prepared
-                ]
-            self._send_json(HTTPStatus.OK, {"analyses": results})
+                for email in prepared:
+                    self._send_ndjson({"type": "start", "id": email["id"]})
+                    content = ""
+                    for token in stream_email_summary(
+                        model, email["subject"], email["sender"], email["recipient"], email["body"]
+                    ):
+                        content += token
+                        self._send_ndjson({"type": "token", "id": email["id"], "content": token})
+                    summary = json.loads(content)
+                    if not isinstance(summary, dict):
+                        raise ValueError("The model response was not a JSON object.")
+                    self._send_ndjson({"type": "analysis", "analysis": {"id": email["id"], **summary}})
+            self._send_ndjson({"type": "complete"})
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
-            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            if getattr(self, "_stream_started", False):
+                self._send_ndjson({"type": "error", "error": str(error)})
+            else:
+                self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
         except Exception as error:
-            self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": f"Local AI analysis failed: {error}"})
+            message = f"Local AI analysis failed: {error}"
+            if getattr(self, "_stream_started", False):
+                self._send_ndjson({"type": "error", "error": message})
+            else:
+                self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": message})
 
     @staticmethod
     def _run_fetch(
@@ -226,6 +233,18 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(response)))
         self.end_headers()
         self.wfile.write(response)
+
+    def _start_ndjson_stream(self) -> None:
+        self._stream_started = True
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/x-ndjson; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "close")
+        self.end_headers()
+
+    def _send_ndjson(self, payload: dict[str, Any]) -> None:
+        self.wfile.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+        self.wfile.flush()
 
     def log_message(self, format: str, *args: object) -> None:
         return

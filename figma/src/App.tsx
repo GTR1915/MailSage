@@ -367,6 +367,7 @@ export default function App() {
   const [activeEmail, setActiveEmail] = useState<Email | null>(null)
   const [analyzed, setAnalyzed] = useState<AiAnalysis[]>([])
   const [analyzing, setAnalyzing] = useState(false)
+  const [streamedSummary, setStreamedSummary] = useState("")
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
@@ -449,6 +450,7 @@ export default function App() {
       return
     }
     setAnalyzing(true)
+    setStreamedSummary("")
     setActiveEmail(null)
     try {
       const response = await fetch("/api/analyze", {
@@ -463,11 +465,37 @@ export default function App() {
           })),
         }),
       })
-      const result = (await response.json()) as { analyses?: AiAnalysis[]; error?: string }
-      if (!response.ok || !result.analyses) throw new Error(result.error || "Local AI could not analyze these emails.")
-      setAnalyzed(result.analyses)
+      if (!response.ok || !response.body) throw new Error("Local AI could not start the analysis.")
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      const rawById = new Map<string, string>()
+      const completed: AiAnalysis[] = []
+      let buffer = ""
+      while (true) {
+        const { value, done } = await reader.read()
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() || ""
+        for (const line of lines) {
+          if (!line.trim()) continue
+          const event = JSON.parse(line) as { type: string; id?: string; content?: string; analysis?: AiAnalysis; error?: string }
+          if (event.type === "token" && event.id && event.content) {
+            const raw = `${rawById.get(event.id) || ""}${event.content}`
+            rawById.set(event.id, raw)
+            const match = raw.match(/"summary"\s*:\s*"([\s\S]*)/)
+            if (match) setStreamedSummary(match[1].split('",')[0].replace(/\\n/g, "\n").replace(/\\"/g, '"'))
+          } else if (event.type === "analysis" && event.analysis) {
+            completed.push(event.analysis)
+          } else if (event.type === "error") {
+            throw new Error(event.error || "Local AI could not analyze these emails.")
+          }
+        }
+        if (done) break
+      }
+      if (!completed.length) throw new Error("Local AI returned no analysis.")
+      setAnalyzed(completed)
       setPage("AI analyses")
-      notify(`Analyzed ${result.analyses.length} email${result.analyses.length === 1 ? "" : "s"} locally.`)
+      notify(`Analyzed ${completed.length} email${completed.length === 1 ? "" : "s"} locally.`)
     } catch (error) {
       notify(error instanceof Error ? error.message : "Local AI could not analyze these emails.")
     } finally {
@@ -928,7 +956,7 @@ export default function App() {
                     <Icon name="sparkles" size={32} />
                   </div>
                   <h3>Connecting the dots…</h3>
-                  <p>Preparing your demo summary and next steps.</p>
+                  <p>{streamedSummary || "Starting your local summary…"}</p>
                 </div>
               ) : analyzed.length ? (
                 <div className="analysis-result">

@@ -231,7 +231,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 .toast { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 30px); padding: 14px 18px; background: var(--surface); border: 1px solid #e1d7ed; border-radius: 12px; box-shadow: 0 10px 35px #4929511c; z-index: 100; color: #a079b5; font-size: 12px; }
 .toast span { max-width: 500px; }
 .modal-backdrop { position: fixed; inset: 0; z-index: 90; background: #21172970; backdrop-filter: blur(7px); display: flex; align-items: center; justify-content: center; padding: 25px; }
-.modal { position: relative; background: var(--surface); border: 1px solid #e9dfef; border-radius: 19px; max-width: 620px; width: 100%; padding: 34px; max-height: 90vh; overflow: auto; box-shadow: 0 25px 100px #27142b38; }
+.modal { position: relative; background: var(--surface); border: 1px solid #e9dfef; border-radius: 19px; width: min(94vw, 1040px); padding: clamp(21px, 3vw, 34px); max-height: 90vh; overflow: auto; box-shadow: 0 25px 100px #27142b38; }
 .modal-close { position: absolute; top: 17px; right: 18px; }
 .modal h2 { font-family: 'Manrope', sans-serif; font-size: 23px; font-weight: 650; letter-spacing: -.6px; color: #80628f; margin: 19px 0; }
 .modal-sender { display: flex; align-items: center; gap: 11px; padding: 15px 0 21px; border-bottom: 1px solid var(--border); }
@@ -240,9 +240,9 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 .modal-sender p { font-size: 10px; color: #b79ac4; margin-top: 5px; }
 .modal-sender > span:last-child { margin-left: auto; font-size: 10px; color: #b49bc1; }
 .email-body { white-space: pre-wrap; font-size: 13px; line-height: 1.9; padding: 27px 0; color: #a18aae; }
-.email-html { white-space: normal; overflow-x: auto; }
-.email-html img { max-width: 100%; height: auto; }
-.email-html table { max-width: 100%; }
+.email-html { width: 100%; white-space: normal; overflow-x: auto; }
+.email-html img, .email-html iframe { max-width: 100% !important; height: auto; }
+.email-html table { max-width: 100% !important; width: auto !important; }
 .email-html a { color: #6753ba; text-decoration: underline; }
 .modal-bottom { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding-top: 21px; border-top: 1px solid var(--border); }
 .modal-bottom > span { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #bea4cc; }
