@@ -161,10 +161,12 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                     ):
                         content += token
                         self._send_ndjson({"type": "token", "id": email["id"], "content": token})
-                    summary = json.loads(content)
-                    if not isinstance(summary, dict):
-                        raise ValueError("The model response was not a JSON object.")
-                    self._send_ndjson({"type": "analysis", "analysis": {"id": email["id"], **summary}})
+                    if not content.strip():
+                        raise ValueError("The model returned an empty response.")
+                    self._send_ndjson({
+                        "type": "analysis",
+                        "analysis": {"id": email["id"], "markdown": content},
+                    })
             self._send_ndjson({"type": "complete"})
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
             if getattr(self, "_stream_started", False):

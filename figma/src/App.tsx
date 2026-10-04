@@ -1,5 +1,6 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import DOMPurify from "dompurify"
+import { marked } from "marked"
 
 type IconName = "mail" | "sparkles" | "search" | "chevron" | "calendar" | "arrow" | "grid" | "star" | "settings" | "help" | "bell" | "close" | "check" | "refresh" | "clock" | "shield" | "external" | "more" | "file" | "logout"
 function Icon({
@@ -174,10 +175,11 @@ type FetchJob = {
 
 type AiAnalysis = {
   id: string
-  summary: string
-  important: string[]
-  actions: string[]
-  deadlines: string[]
+  markdown: string
+}
+
+function markdownHtml(markdown: string) {
+  return DOMPurify.sanitize(marked.parse(markdown, { async: false }))
 }
 
 const avatarColors = ["purple", "violet", "blue", "rose", "teal", "orange"]
@@ -372,6 +374,12 @@ export default function App() {
   const [analyzed, setAnalyzed] = useState<AiAnalysis[]>([])
   const [analyzing, setAnalyzing] = useState(false)
   const [streamedSummary, setStreamedSummary] = useState("")
+  const [activeStreamId, setActiveStreamId] = useState("")
+  const [streamedById, setStreamedById] = useState<Record<string, string>>({})
+  const [revealedById, setRevealedById] = useState<Record<string, string>>({})
+  const [aiPanelWidth, setAiPanelWidth] = useState(282)
+  const inboxLayoutRef = useRef<HTMLDivElement>(null)
+  const panelResizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
@@ -389,6 +397,42 @@ export default function App() {
     setNotice(message)
     window.setTimeout(() => setNotice(""), 4500)
   }
+  function resizeAiPanel(width: number) {
+    const layoutWidth = inboxLayoutRef.current?.clientWidth || 0
+    const maxWidth = Math.max(220, Math.min(layoutWidth * 0.5, layoutWidth - 360))
+    setAiPanelWidth(Math.min(maxWidth, Math.max(220, width)))
+  }
+  function handleAiPanelResizeKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+    event.preventDefault()
+    resizeAiPanel(aiPanelWidth + (event.key === "ArrowLeft" ? 16 : -16))
+  }
+  useEffect(() => {
+    const hasUnrevealedText = Object.entries(streamedById).some(
+      ([id, content]) => (revealedById[id] || "").length < content.length,
+    )
+    if (!hasUnrevealedText) return
+
+    const timer = window.setTimeout(() => {
+      setRevealedById((current) => {
+        const next = { ...current }
+        for (const [id, content] of Object.entries(streamedById)) {
+          const revealed = next[id] || ""
+          if (revealed.length < content.length) {
+            next[id] = content.slice(0, revealed.length + 2)
+          }
+        }
+        return next
+      })
+    }, 20)
+
+    return () => window.clearTimeout(timer)
+  }, [revealedById, streamedById])
+  useEffect(() => {
+    const handleResize = () => resizeAiPanel(aiPanelWidth)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [aiPanelWidth])
   async function fetchEmails(forceRefresh = false) {
     if (!start || !end || start > end) {
       notify(
@@ -455,6 +499,9 @@ export default function App() {
     }
     setAnalyzing(true)
     setStreamedSummary("")
+    setActiveStreamId("")
+    setStreamedById({})
+    setRevealedById({})
     setActiveEmail(null)
     try {
       const response = await fetch("/api/analyze", {
@@ -487,12 +534,19 @@ export default function App() {
           if (!line.trim()) continue
           const event = JSON.parse(line) as { type: string; id?: string; content?: string; analysis?: AiAnalysis; error?: string }
           if (event.type === "token" && event.id && event.content) {
-            const raw = `${rawById.get(event.id) || ""}${event.content}`
-            rawById.set(event.id, raw)
-            const match = raw.match(/"summary"\s*:\s*"([\s\S]*)/)
-            if (match) setStreamedSummary(match[1].split('",')[0].replace(/\\n/g, "\n").replace(/\\"/g, '"'))
+            const id = event.id
+            const raw = `${rawById.get(id) || ""}${event.content}`
+            rawById.set(id, raw)
+            setActiveStreamId(id)
+            setStreamedSummary(raw)
+            setStreamedById((previous) => ({ ...previous, [id]: raw }))
           } else if (event.type === "analysis" && event.analysis) {
-            completed.push(event.analysis)
+            const analysis = event.analysis
+            completed.push(analysis)
+            setStreamedById((previous) => ({
+              ...previous,
+              [analysis.id]: analysis.markdown,
+            }))
           } else if (event.type === "error") {
             throw new Error(event.error || "Local AI could not analyze these emails.")
           }
@@ -790,7 +844,11 @@ export default function App() {
               color="purple"
             />
           </div>
-          <div className="inbox-layout">
+          <div
+            className="inbox-layout"
+            ref={inboxLayoutRef}
+            style={{ "--ai-panel-width": `${aiPanelWidth}px` } as React.CSSProperties}
+          >
             <section className="inbox-card">
               <div className="inbox-title">
                 <div>
@@ -949,6 +1007,40 @@ export default function App() {
                 </span>
               </div>
             </section>
+            <div
+              className="ai-panel-resize-handle"
+              role="separator"
+              aria-label="Resize Your AI copilot panel"
+              aria-orientation="vertical"
+              aria-valuemin={220}
+              aria-valuemax={Math.max(
+                220,
+                Math.min(
+                  (inboxLayoutRef.current?.clientWidth || 0) * 0.5,
+                  (inboxLayoutRef.current?.clientWidth || 0) - 360,
+                ),
+              )}
+              aria-valuenow={aiPanelWidth}
+              tabIndex={0}
+              onKeyDown={handleAiPanelResizeKeyDown}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId)
+                panelResizeRef.current = {
+                  startX: event.clientX,
+                  startWidth: aiPanelWidth,
+                }
+              }}
+              onPointerMove={(event) => {
+                const drag = panelResizeRef.current
+                if (drag) resizeAiPanel(drag.startWidth + drag.startX - event.clientX)
+              }}
+              onPointerUp={() => {
+                panelResizeRef.current = null
+              }}
+              onPointerCancel={() => {
+                panelResizeRef.current = null
+              }}
+            />
             <aside className="ai-panel">
               <div className="ai-panel-heading">
                 <span className="ai-icon">
@@ -963,7 +1055,16 @@ export default function App() {
                     <Icon name="sparkles" size={32} />
                   </div>
                   <h3>Connecting the dots…</h3>
-                  <p>{streamedSummary || "Starting your local summary…"}</p>
+                  {streamedSummary ? (
+                    <div
+                      className="markdown-summary"
+                      dangerouslySetInnerHTML={{
+                        __html: markdownHtml(revealedById[activeStreamId] || ""),
+                      }}
+                    />
+                  ) : (
+                    <p className="markdown-summary">Starting your local summary…</p>
+                  )}
                 </div>
               ) : analyzed.length ? (
                 <div className="analysis-result">
@@ -976,27 +1077,17 @@ export default function App() {
                     Based on {analyzed.length}{" "}
                     {analyzed.length === 1 ? "email" : "emails"} you shared.
                   </p>
-                  <h4>At a glance</h4>
                   {analyzed.map((analysis) => (
                     <div className="summary-item" key={analysis.id}>
                       <strong>{fetched.find((email) => String(email.id) === analysis.id)?.sender || "Email"}</strong>
-                      <p>{analysis.summary}</p>
-                      {analysis.important.map((fact) => <p key={fact}>• {fact}</p>)}
+                      <div
+                        className="markdown-summary"
+                        dangerouslySetInnerHTML={{
+                          __html: markdownHtml(revealedById[analysis.id] || ""),
+                        }}
+                      />
                     </div>
                   ))}
-                  <h4>Next steps</h4>
-                  {analyzed.some((analysis) => analysis.actions.length || analysis.deadlines.length) ? (
-                    analyzed.flatMap((analysis) => [...analysis.actions, ...analysis.deadlines]).map((action, index) => (
-                        <div className="action-item" key={`${action}-${index}`}>
-                          <Icon name="check" size={15} />
-                          <p>{action}</p>
-                        </div>
-                      ))
-                  ) : (
-                    <p className="no-actions">
-                      No immediate action needed. You’re all caught up.
-                    </p>
-                  )}
                   <button
                     className="button secondary full-width"
                     onClick={() => {

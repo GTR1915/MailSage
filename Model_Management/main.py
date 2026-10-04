@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 from html.parser import HTMLParser
-import json
 import sys
 from pathlib import Path
 from typing import Any, Iterator
@@ -16,42 +15,25 @@ from typing import Any, Iterator
 from llama_cpp import Llama
 
 try:
+    from .SYSTEM_PROMPT import *
+except ImportError:  # Allows direct script execution outside package imports.
+    from SYSTEM_PROMPT import *
+
+
+try:
     from .model_config import MODEL_PATH
 except ImportError:  # Allows both `python main.py` and package imports by the API.
     from model_config import MODEL_PATH
 
 
-SYSTEM_PROMPT = """You summarize one email at a time. Return only a JSON object.
-Do not include markdown, commentary, or reasoning. Do not invent facts.
-Use this exact structure:
-{
-  "summary": "one or two concise sentences",
-  "important": ["important fact"],
-  "actions": ["action for the recipient"],
-  "deadlines": ["explicit date, time, or deadline"]
-}
-Use empty arrays where no facts apply."""
 
-MODEL_CONTEXT_TOKENS = 16384
+
+SYSTEM_PROMPT = SYSTEM_PROMPT3
+
+MODEL_CONTEXT_TOKENS = 1024*16
 MIN_OUTPUT_TOKENS = 512
-MAX_OUTPUT_TOKENS = 2048
+MAX_OUTPUT_TOKENS = 1024*3
 CHAT_TEMPLATE_TOKEN_RESERVE = 128
-
-SUMMARY_RESPONSE_FORMAT = {
-    "type": "json_object",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "summary": {"type": "string"},
-            "important": {"type": "array", "items": {"type": "string"}},
-            "actions": {"type": "array", "items": {"type": "string"}},
-            "deadlines": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": ["summary", "important", "actions", "deadlines"],
-        "additionalProperties": False,
-    },
-}
-
 
 class _ReadableEmailHTML(HTMLParser):
     _BLOCK_TAGS = {
@@ -163,15 +145,12 @@ def email_to_message(subject: str, sender: str, recipient: str, body: str) -> st
 
 def summarize_email(
     llm: Llama, subject: str, sender: str, recipient: str, body: str
-) -> dict[str, Any]:
-    """Return the final structured summary after consuming the token stream."""
+) -> str:
+    """Return the Markdown summary after consuming the token stream."""
     content = "".join(stream_email_summary(llm, subject, sender, recipient, body))
-    if not content:
+    if not content.strip():
         raise ValueError("The model returned an empty response.")
-    summary = json.loads(content)
-    if not isinstance(summary, dict):
-        raise ValueError("The model response was not a JSON object.")
-    return summary
+    return content
 
 
 def stream_email_summary(
@@ -183,11 +162,13 @@ def stream_email_summary(
     response = llm.create_chat_completion(
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
+            # {"role": "user", "content": user_message},
+            {"role": "user", "content": user_message + "\n/no_think"},   # To diable thinking
+
         ],
         temperature=0.1,
         max_tokens=max_tokens,
-        response_format=SUMMARY_RESPONSE_FORMAT,
+        # response_format=SUMMARY_RESPONSE_FORMAT,   # Not needed if SYSTEM_PROMPT is Markdown-based
         stream=True,
     )
     finish_reason: str | None = None
@@ -226,9 +207,9 @@ def main() -> int:
         summary = summarize_email(
             create_model(), args.subject, args.sender, args.recipient, args.body
         )
-        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        print(summary)
         return 0
-    except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
+    except (FileNotFoundError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 2
 

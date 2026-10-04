@@ -126,8 +126,13 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 .stat-value { position: relative; z-index: 1; font-family: 'Manrope', sans-serif; font-size: 32px; font-weight: 650; letter-spacing: -1.3px; color: #4c405c; line-height: 1.2; margin-top: 4px; }
 .stat-detail { display: block; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 400; letter-spacing: 0; color: #a39bac; margin-top: 8px; line-height: 1.5; }
 
-.inbox-layout { display: grid; grid-template-columns: minmax(0, 1fr) 282px; gap: 22px; align-items: start; }
+.inbox-layout { display: grid; grid-template-columns: minmax(0, 1fr) 12px minmax(220px, var(--ai-panel-width, 282px)); gap: 12px; align-items: start; }
 .inbox-layout-single { grid-template-columns: minmax(0, 1fr); }
+.ai-panel-resize-handle { position: relative; align-self: stretch; min-height: 100px; cursor: col-resize; touch-action: none; user-select: none; }
+.ai-panel-resize-handle::after { content: ''; position: absolute; inset: 0 auto 0 5px; width: 2px; border-radius: 2px; background: transparent; transition: background .18s, width .18s, left .18s; }
+.ai-panel-resize-handle:hover::after, .ai-panel-resize-handle:focus-visible::after, .ai-panel-resize-handle:active::after { left: 4px; width: 4px; background: #a88bd4; }
+.ai-panel-resize-handle:focus-visible { outline: none; }
+.ai-panel-resize-handle:focus-visible::after { box-shadow: 0 0 0 3px #b7aaff55; }
 .inbox-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: 0 3px 6px #33255003; }
 .inbox-title { display: flex; align-items: center; justify-content: space-between; padding: 21px 21px 18px; }
 .inbox-title h2 { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 600; color: #544861; }
@@ -214,6 +219,18 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 .summary-item { margin-bottom: 15px; padding-bottom: 13px; border-bottom: 1px solid #c89ce61a; }
 .summary-item strong { font-size: 11px; font-weight: 550; color: #cfb4df; }
 .summary-item p { font-size: 11px; line-height: 1.8; color: #b69ac8; margin-top: 5px; }
+.markdown-summary { min-width: 0; overflow-wrap: anywhere; text-align: left; font-size: 11px; line-height: 1.8; color: #b69ac8; margin-top: 5px; }
+.markdown-summary > :first-child { margin-top: 0; }
+.markdown-summary > :last-child { margin-bottom: 0; }
+.markdown-summary h1, .markdown-summary h2, .markdown-summary h3, .markdown-summary h4 { color: #ead3fa; line-height: 1.45; margin: 14px 0 6px; text-align: left; }
+.markdown-summary h1 { font-size: 16px; }
+.markdown-summary h2 { font-size: 14px; }
+.markdown-summary h3, .markdown-summary h4 { font-size: 12px; }
+.markdown-summary p, .markdown-summary ul, .markdown-summary ol, .markdown-summary blockquote, .markdown-summary pre { margin: 6px 0; text-align: left; }
+.markdown-summary ul, .markdown-summary ol { padding-left: 20px; }
+.markdown-summary a { color: #d3b7e6; text-decoration: underline; }
+.markdown-summary code { overflow-wrap: anywhere; font-family: monospace; }
+.markdown-summary pre { overflow-x: auto; white-space: pre-wrap; }
 .action-item { display: flex; gap: 8px; margin: 13px 0; color: #d0aaed; }
 .action-item svg { margin-top: 2px; }
 .action-item p, .no-actions { font-size: 11px; line-height: 1.8; color: #b69ac8; }
@@ -283,7 +300,6 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 
 @media (min-width: 1600px) {
   main { padding: 40px 44px 0; }
-  .inbox-layout { grid-template-columns: minmax(0, 1fr) 310px; }
   .email-row { padding-block: 17px; }
   .email-subject { font-size: 12px; }
   .sender-line strong { font-size: 12px; }
@@ -308,7 +324,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
   .date-controls { width: 100%; justify-content: space-between; }
   .date-field { flex: 1; }
   .date-field input { width: 100%; }
-  .inbox-layout { grid-template-columns: minmax(0, 1fr) 255px; gap: 17px; }
+  .inbox-layout { gap: 10px; }
   .email-toolbar { flex-wrap: wrap; }
   .tabs { width: 100%; justify-content: space-between; }
   .search-field { width: 100%; }
@@ -327,6 +343,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
   .sidebar { width: 194px; padding-inline: 13px; }
   .main-shell { margin-left: 194px; }
   .inbox-layout { grid-template-columns: minmax(0, 1fr); }
+  .ai-panel-resize-handle { display: none; }
   .ai-panel { display: grid; grid-template-columns: 1fr 1fr; }
   .ai-panel-heading, .ai-tip, .ai-privacy, .analysis-result { grid-column: 1 / -1; }
   .ai-welcome { padding: 37px 15px 29px; }
@@ -413,6 +430,7 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
   .email-ai { width: 26px; height: 26px; }
   .table-head, .table-footer { padding-inline: 13px; }
   .table-footer { font-size: 8px; }
+  .inbox-layout { gap: 17px; }
   .ai-panel { grid-template-columns: 1fr; }
   .ai-welcome, .ai-features { grid-column: 1 / -1; }
   .ai-welcome { padding-top: 43px; padding-bottom: 30px; }

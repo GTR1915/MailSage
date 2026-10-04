@@ -21,7 +21,6 @@ try:
     from .main import (
         CHAT_TEMPLATE_TOKEN_RESERVE,
         MODEL_CONTEXT_TOKENS,
-        SUMMARY_RESPONSE_FORMAT,
         SYSTEM_PROMPT,
         create_model,
         email_to_message,
@@ -33,7 +32,6 @@ except ImportError:  # Allows both `python model_prompt_check.py` and package im
     from main import (
         CHAT_TEMPLATE_TOKEN_RESERVE,
         MODEL_CONTEXT_TOKENS,
-        SUMMARY_RESPONSE_FORMAT,
         SYSTEM_PROMPT,
         create_model,
         email_to_message,
@@ -96,11 +94,12 @@ def stream_raw_response(
     response = llm.create_chat_completion(
         messages=[
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message},
+            # {"role": "user", "content": user_message},
+            {"role": "user", "content": user_message + "\n/no_think"},   # To diable thinking
         ],
         temperature=0.1,
         max_tokens=max_tokens,
-        response_format=SUMMARY_RESPONSE_FORMAT,
+        # response_format=SUMMARY_RESPONSE_FORMAT,   # Not needed if SYSTEM_PROMPT is Markdown-based
         stream=True,
     )
     finish_reason: str | None = None

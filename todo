@@ -10,13 +10,15 @@ when we open an email, most of the time the size of the opened window is not bes
 I want the streaming = True for the response generation by the model. And therefore change suitable mechanisms as well whereever needed in the project.
 The text should start begin appearing in the summary as soon as the model starts generating so the software will seem more responsive.
 
-## Still pending (do these):
+## Still pending (sovled):
 While analysing some linkedin mails, the model is giving error and saying "Unterminated string starting at: line 1 column 13 (char 12)  X", so fix them.
 While analysing some linkedin mails, the model is hitting the max token limit and stops it's streaming in in between. [Some Linkedin mails used to be very very long so they it need to process alot.]
 Don't cap cut input but instead increase the token limit for such messages
 Increase the output token limit when the model need to process alot of imformation.
 Run this command and check it yourself:
 python -u "c:\Users\piyus\OneDrive\Desktop\Projects\Gmail Analyzer\Model_Management\model_prompt_check.py" 11
+
+
 
 
 ## Still pending (don't do these right now, these are future plannings of the company)
