@@ -6,19 +6,20 @@ There should also be a option for fetch again which will fetch the data again ev
 
 There should be a loading bar which which should show while fetching the data (mails), it will represent how much data has been fetched from overall and how much is remaining. Once the fetching of the data completes the loading bar should get removed.
 
-
-
-Still pending (do these):
 when we open an email, most of the time the size of the opened window is not best fit for the opened email html page, make the email viewer size automatically adjustable according to the html page.
 I want the streaming = True for the response generation by the model. And therefore change suitable mechanisms as well whereever needed in the project.
 The text should start begin appearing in the summary as soon as the model starts generating so the software will seem more responsive.
-Currently the model is responsing very reasonable answers according to the given context, so don't change it's system prompt as well.
 
-
-
-
-Still pending (don't do these right now, these are future plannings of the company)
+## Still pending (do these):
 While analysing some linkedin mails, the model is giving error and saying "Unterminated string starting at: line 1 column 13 (char 12)  X", so fix them.
+While analysing some linkedin mails, the model is hitting the max token limit and stops it's streaming in in between. [Some Linkedin mails used to be very very long so they it need to process alot.]
+Don't cap cut input but instead increase the token limit for such messages
+Increase the output token limit when the model need to process alot of imformation.
+Run this command and check it yourself:
+python -u "c:\Users\piyus\OneDrive\Desktop\Projects\Gmail Analyzer\Model_Management\model_prompt_check.py" 11
+
+
+## Still pending (don't do these right now, these are future plannings of the company)
 Implement the same structure of "AI Analyses" tab from the figma_backup_version to the main webpage present in figma folder. We want same design.
 In the key insights section of the new "AI Analyses" tab, there should be the short summary of the email and in the right section (Next Steps moving things forward) there should be suggestions which the user might want to take, so include suggestion (action in text) and suggestive buttons there as well according to the email. The buttons should be working and it may possible that those buttons reflect the same thing (or link) which is mentioned in the email itself and further more if AI wants to suggest something more than those (like url etc.) then that can also be present there but it should be meaningful and relevent.
 If the user gives the command to analyse only one email, then its all summary report should be present in the right side on the same tab 'Inbox' tab (do not automatically redirect to AI Analysys tab)

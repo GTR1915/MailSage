@@ -19,19 +19,25 @@ from llama_cpp import Llama
 
 try:
     from .main import (
+        CHAT_TEMPLATE_TOKEN_RESERVE,
+        MODEL_CONTEXT_TOKENS,
         SUMMARY_RESPONSE_FORMAT,
         SYSTEM_PROMPT,
         create_model,
         email_to_message,
+        output_token_budget,
         select_email_body,
     )
     from .model_config import PROJECT_ROOT
 except ImportError:  # Allows both `python model_prompt_check.py` and package imports.
     from main import (
+        CHAT_TEMPLATE_TOKEN_RESERVE,
+        MODEL_CONTEXT_TOKENS,
         SUMMARY_RESPONSE_FORMAT,
         SYSTEM_PROMPT,
         create_model,
         email_to_message,
+        output_token_budget,
         select_email_body,
     )
     from model_config import PROJECT_ROOT
@@ -84,25 +90,35 @@ def _system_prompt(args: argparse.Namespace) -> str:
 
 
 def stream_raw_response(
-    llm: Llama, system_prompt: str, user_message: str
+    llm: Llama, system_prompt: str, user_message: str, max_tokens: int
 ) -> Iterator[str]:
-    """Yield generated text using the website's JSON-mode streaming settings."""
+    """Yield generated text with an input-sized output budget."""
     response = llm.create_chat_completion(
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
         temperature=0.1,
-        max_tokens=350,
+        max_tokens=max_tokens,
         response_format=SUMMARY_RESPONSE_FORMAT,
         stream=True,
     )
+    finish_reason: str | None = None
     for chunk in response:
         choices = chunk.get("choices", [])
         if choices:
-            content = choices[0].get("delta", {}).get("content")
+            choice = choices[0]
+            content = choice.get("delta", {}).get("content")
             if content:
                 yield content
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
+    if finish_reason == "length":
+        print(
+            "\nWarning: generation stopped at the output-token limit; "
+            "the JSON response may be incomplete.",
+            file=sys.stderr,
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -164,9 +180,20 @@ def main() -> int:
         print(prompt)
         print("\nUser input:")
         print(user_message)
+        llm = create_model()
+        max_output_tokens, prompt_tokens = output_token_budget(
+            llm, prompt, user_message
+        )
+        print(
+            f"\nModel context: {MODEL_CONTEXT_TOKENS} tokens"
+            f" | Estimated prompt: {prompt_tokens - CHAT_TEMPLATE_TOKEN_RESERVE} tokens"
+            f" | Output limit: {max_output_tokens} tokens"
+        )
         print("Raw model output:")
         sys.stdout.flush()
-        for text in stream_raw_response(create_model(), prompt, user_message):
+        for text in stream_raw_response(
+            llm, prompt, user_message, max_output_tokens
+        ):
             print(text, end="", flush=True)
         print()
         return 0

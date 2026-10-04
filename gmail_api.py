@@ -141,8 +141,6 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                     if not isinstance(legacy_body, str) or not legacy_body.strip():
                         raise
                     body = legacy_body
-                if len(body) > 50_000:
-                    raise ValueError("An email body is too large to analyze.")
                 prepared.append({
                     "id": str(email.get("id", "")),
                     "subject": str(email.get("subject", "")),

@@ -32,6 +32,11 @@ Use this exact structure:
 }
 Use empty arrays where no facts apply."""
 
+MODEL_CONTEXT_TOKENS = 16384
+MIN_OUTPUT_TOKENS = 512
+MAX_OUTPUT_TOKENS = 2048
+CHAT_TEMPLATE_TOKEN_RESERVE = 128
+
 SUMMARY_RESPONSE_FORMAT = {
     "type": "json_object",
     "schema": {
@@ -113,7 +118,34 @@ def create_model() -> Llama:
             f"Model was not found at {MODEL_PATH}. "
             "Run: python Model_Management/download_model.py"
         )
-    return Llama(model_path=str(MODEL_PATH), n_ctx=4096, n_gpu_layers=-1, verbose=False)
+    return Llama(
+        model_path=str(MODEL_PATH),
+        n_ctx=MODEL_CONTEXT_TOKENS,
+        n_gpu_layers=-1,
+        verbose=False,
+    )
+
+
+def output_token_budget(
+    llm: Llama, system_prompt: str, user_message: str
+) -> tuple[int, int]:
+    """Choose a response budget from prompt size without truncating input."""
+    prompt_tokens = (
+        len(llm.tokenize(system_prompt.encode("utf-8"), add_bos=False))
+        + len(llm.tokenize(user_message.encode("utf-8"), add_bos=False))
+        + CHAT_TEMPLATE_TOKEN_RESERVE
+    )
+    available_tokens = llm.n_ctx() - prompt_tokens
+    if available_tokens < MIN_OUTPUT_TOKENS:
+        raise ValueError(
+            f"The full email and prompt need about {prompt_tokens} tokens, leaving "
+            f"only {available_tokens} tokens for the response in the "
+            f"{llm.n_ctx()}-token context. Increase MODEL_CONTEXT_TOKENS to "
+            "analyze this email without truncating it."
+        )
+
+    size_based_budget = max(MIN_OUTPUT_TOKENS, prompt_tokens // 2)
+    return min(size_based_budget, MAX_OUTPUT_TOKENS, available_tokens), prompt_tokens
 
 
 def email_to_message(subject: str, sender: str, recipient: str, body: str) -> str:
@@ -146,26 +178,33 @@ def stream_email_summary(
     llm: Llama, subject: str, sender: str, recipient: str, body: str
 ) -> Iterator[str]:
     """Yield local-model text as it is generated without changing the prompt."""
+    user_message = email_to_message(subject, sender, recipient, body)
+    max_tokens, _ = output_token_budget(llm, SYSTEM_PROMPT, user_message)
     response = llm.create_chat_completion(
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": email_to_message(subject, sender, recipient, body),
-            },
+            {"role": "user", "content": user_message},
         ],
         temperature=0.1,
-        max_tokens=350,
+        max_tokens=max_tokens,
         response_format=SUMMARY_RESPONSE_FORMAT,
         stream=True,
     )
+    finish_reason: str | None = None
     for chunk in response:
         choices = chunk.get("choices", [])
         if not choices:
             continue
-        content = choices[0].get("delta", {}).get("content")
+        choice = choices[0]
+        content = choice.get("delta", {}).get("content")
         if content:
             yield content
+        if choice.get("finish_reason"):
+            finish_reason = choice["finish_reason"]
+    if finish_reason == "length":
+        raise ValueError(
+            "The model reached its output-token limit before completing the summary."
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
