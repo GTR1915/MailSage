@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from gmail_cache import GmailCache, fetch_with_cache
-from gmail_fetch import parse_datetime
+from gmail_fetch import get_gmail_service, parse_datetime
 from Model_Management.main import (
     create_model,
     select_email_body,
@@ -86,6 +86,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if self.path == "/api/analyze":
             self._analyze()
+            return
+
+        if self.path == "/api/mark-read":
+            self._mark_read()
             return
 
         if self.path != "/api/fetch":
@@ -179,6 +183,56 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                 self._send_ndjson({"type": "error", "error": message})
             else:
                 self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": message})
+
+    def _mark_read(self) -> None:
+        try:
+            payload = self._read_json()
+            message_ids = payload.get("ids")
+            if (
+                not isinstance(message_ids, list)
+                or not message_ids
+                or len(message_ids) > 20
+                or any(not isinstance(message_id, str) or not message_id for message_id in message_ids)
+            ):
+                raise ValueError("Provide between 1 and 20 Gmail message IDs.")
+
+            unique_ids = list(dict.fromkeys(message_ids))
+            CACHE.mark_read(unique_ids)
+        except (ValueError, json.JSONDecodeError) as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        except Exception as error:
+            self._send_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {"error": f"Could not update the local read status: {error}"},
+            )
+            return
+
+        try:
+            service = get_gmail_service(
+                PROJECT_ROOT / "credentials.json",
+                PROJECT_ROOT / ".secrets" / "gmail-token.json",
+            )
+            (
+                service.users()
+                .messages()
+                .batchModify(
+                    userId="me",
+                    body={"ids": unique_ids, "removeLabelIds": ["UNREAD"]},
+                )
+                .execute()
+            )
+            self._send_json(HTTPStatus.OK, {"marked_read": unique_ids})
+        except Exception as error:
+            self._send_json(
+                HTTPStatus.BAD_GATEWAY,
+                {
+                    "error": (
+                        "The email was marked read in the local database, but Gmail "
+                        f"could not be updated: {error}"
+                    )
+                },
+            )
 
     @staticmethod
     def _run_fetch(

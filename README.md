@@ -11,7 +11,7 @@
    py -m pip install -r requirements.txt
    ```
 
-3. Fetch an interval. The first run opens a browser for Gmail read-only consent and stores the renewable token in `.secrets/gmail-token.json`.
+3. Fetch an interval. The first run opens a browser for Gmail consent and stores the renewable token in `.secrets/gmail-token.json`. The app needs Gmail modify access so it can mark a message read when you open it or successfully generate its summary. Existing read-only tokens require renewed consent.
 
    ```powershell
    py gmail_fetch.py --start 2026-10-01T09:00:00+05:30 --end 2026-10-01T18:00:00+05:30 --output emails.jsonl
@@ -58,6 +58,6 @@ corepack pnpm dev
 
 Choose an inclusive start time and exclusive end time in the interface, then select **Fetch emails**. The first fetch opens Google OAuth if the local token does not exist. Fetched records are displayed in the interface and overwritten into `emails.jsonl` for downstream use.
 
-Fetched intervals are stored in `.data/gmail-cache.sqlite3`. A later fetch reuses any complete portion of that time range from the local cache and contacts Gmail only for missing intervals. Use **Fetch again** to bypass the cache, refresh the selected interval from Gmail, and update the local copy. The progress bar reports each completed Gmail message while a network fetch is active.
+Fetched intervals are stored in `.data/gmail-cache.sqlite3`. A later fetch reuses any complete portion of that time range from the local cache and contacts Gmail only for missing intervals. Use **Fetch again** to bypass the cache, refresh the selected interval from Gmail, and update the local copy. The progress bar reports each completed Gmail message while a network fetch is active. Opening a message or successfully analyzing it marks it read in the local cache and Gmail; if Gmail cannot be updated, the local state is retained and the interface displays a warning.
 
 The interface also includes a **Your AI copilot** panel. Click an email's sparkle icon, or select emails and use **Analyze with AI**, to summarize only those selected messages using the Qwen model in `Models/`. The local bridge keeps the model loaded after the first request; no email content is sent to a remote AI service. HTML email bodies are sanitized before rendering in the message reader, with plain text used as a fallback.

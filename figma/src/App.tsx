@@ -397,6 +397,41 @@ export default function App() {
     setNotice(message)
     window.setTimeout(() => setNotice(""), 4500)
   }
+  async function markEmailsRead(ids: (string | number)[]) {
+    const emailIds = ids.map(String)
+    setRead((previous) => [...new Set([...previous, ...ids])])
+    setEmails((previous) =>
+      previous.map((email) =>
+        emailIds.includes(String(email.id)) ? { ...email, unread: false } : email,
+      ),
+    )
+    setActiveEmail((previous) =>
+      previous && emailIds.includes(String(previous.id))
+        ? { ...previous, unread: false }
+        : previous,
+    )
+
+    const gmailIds = ids.filter((id): id is string => typeof id === "string")
+    if (!gmailIds.length) return
+
+    try {
+      const response = await fetch("/api/mark-read", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: gmailIds }),
+      })
+      const result = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        throw new Error(result.error || "Gmail could not mark the email as read.")
+      }
+    } catch (error) {
+      notify(
+        error instanceof Error
+          ? error.message
+          : "Marked read locally, but Gmail could not be updated.",
+      )
+    }
+  }
   function resizeAiPanel(width: number) {
     const layoutWidth = inboxLayoutRef.current?.clientWidth || 0
     const maxWidth = Math.max(220, Math.min(layoutWidth * 0.5, layoutWidth - 360))
@@ -554,6 +589,7 @@ export default function App() {
         if (done) break
       }
       if (!completed.length) throw new Error("Local AI returned no analysis.")
+      await markEmailsRead(completed.map((analysis) => analysis.id))
       setAnalyzed(completed)
       setPage("AI analyses")
       notify(`Analyzed ${completed.length} email${completed.length === 1 ? "" : "s"} locally.`)
@@ -672,7 +708,7 @@ export default function App() {
           <div className="topbar-actions">
             <span className="demo-badge">
               <span />
-              Demo workspace
+              Personal workspace
             </span>
             <button
               className="icon-button"
@@ -936,7 +972,7 @@ export default function App() {
                       className="email-content"
                       onClick={() => {
                         setActiveEmail(email)
-                        setRead((prev) => [...prev, email.id])
+                        void markEmailsRead([email.id])
                       }}
                     >
                       <div className="sender-line">
@@ -1273,7 +1309,8 @@ export default function App() {
                 <h2>Connect your Gmail</h2>
                 <p className="modal-description">
                   Fetching opens the Google sign-in page the first time. Your
-                  Gmail token is stored locally and uses read-only access.
+                  Gmail token is stored locally. The app reads your email and
+                  updates its read status when you open it or generate a summary.
                 </p>
                 <div className="integration-status">
                   <span className="tiny-dot" />

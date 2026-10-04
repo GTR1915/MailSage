@@ -83,6 +83,31 @@ class GmailCache:
             ).fetchall()
         return [json.loads(row[0]) for row in rows]
 
+    def mark_read(self, message_ids: list[str]) -> None:
+        if not message_ids:
+            return
+
+        placeholders = ",".join("?" for _ in message_ids)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"SELECT id, payload FROM messages WHERE id IN ({placeholders})",
+                message_ids,
+            ).fetchall()
+            for message_id, payload in rows:
+                message = json.loads(payload)
+                labels = message.get("label_ids", [])
+                message["label_ids"] = [
+                    label for label in labels if label != "UNREAD"
+                ]
+                connection.execute(
+                    """
+                    UPDATE messages
+                    SET payload = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (json.dumps(message, ensure_ascii=False), message_id),
+                )
+
     def store_interval(
         self, start: datetime, end: datetime, messages: list[dict[str, Any]]
     ) -> None:

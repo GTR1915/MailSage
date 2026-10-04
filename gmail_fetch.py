@@ -16,7 +16,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
 def parse_datetime(value: str) -> datetime:
@@ -35,6 +35,9 @@ def get_gmail_service(credentials_path: Path, token_path: Path) -> Resource:
     if token_path.exists():
         credentials = Credentials.from_authorized_user_file(str(token_path), SCOPES)
 
+    if credentials and not credentials.has_scopes(SCOPES):
+        credentials = None
+
     if credentials and credentials.expired and credentials.refresh_token:
         credentials.refresh(Request())
     elif not credentials or not credentials.valid:
@@ -44,7 +47,7 @@ def get_gmail_service(credentials_path: Path, token_path: Path) -> Resource:
                 "Download it from Google Cloud and pass it with --credentials."
             )
         flow = InstalledAppFlow.from_client_secrets_file(str(credentials_path), SCOPES)
-        credentials = flow.run_local_server(port=0)
+        credentials = flow.run_local_server(port=0, prompt="consent")
 
     token_path.parent.mkdir(parents=True, exist_ok=True)
     token_path.write_text(credentials.to_json(), encoding="utf-8")
