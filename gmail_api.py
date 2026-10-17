@@ -21,6 +21,7 @@ from Model_Management.main import (
     email_to_message,
     MODEL_CONTEXT_TOKENS,
     select_email_body,
+    stream_email_summary,
 )
 from Model_Management.model_config import MODEL_PATH
 
@@ -316,11 +317,29 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             self._start_ndjson_stream()
             for email in prepared:
                 self._send_ndjson({"type": "start", "id": email["id"]})
-                content = manager.chat(
-                    email_to_message(email["subject"], email["sender"], email["recipient"], email["body"]),
-                    system=SYSTEM_PROMPT,
-                )
-                self._send_ndjson({"type": "token", "id": email["id"], "content": content})
+                chunks: list[str] = []
+                if manager.profile.provider.lower() == "local":
+                    # Preserve the original local summary architecture exactly:
+                    # main.py owns the prompt, /no_think control, token budget,
+                    # and llama-cpp streaming loop. Forward every chunk instead
+                    # of joining it before the browser receives it.
+                    llm = manager.create_local_model()
+                    response_chunks = stream_email_summary(
+                        llm,
+                        email["subject"],
+                        email["sender"],
+                        email["recipient"],
+                        email["body"],
+                    )
+                else:
+                    response_chunks = iter((manager.chat(
+                        email_to_message(email["subject"], email["sender"], email["recipient"], email["body"]),
+                        system=SYSTEM_PROMPT,
+                    ),))
+                for chunk in response_chunks:
+                    chunks.append(chunk)
+                    self._send_ndjson({"type": "token", "id": email["id"], "content": chunk})
+                content = "".join(chunks)
                 self._send_ndjson({
                     "type": "analysis",
                     "analysis": {"id": email["id"], "markdown": content},

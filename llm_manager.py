@@ -97,7 +97,10 @@ class LLMManager:
             raise ValueError("prompt cannot be empty")
         provider = self.profile.provider.lower()
         if provider == "local":
-            return self._local_chat(prompt, system)
+            raise LLMError(
+                "Local email summaries are managed by Model_Management/main.py; "
+                "use the website analysis flow instead of LLMManager.chat()."
+            )
         if provider == "gemini":
             return self._gemini_chat(prompt, system)
         if provider in {"openai", "openrouter", "openrouter/free", "openai_compatible"}:
@@ -172,7 +175,8 @@ class LLMManager:
             raise LLMError("Gemini returned no text (the prompt may have been blocked).")
         return content
 
-    def _local_chat(self, prompt: str, system: str | None) -> str:
+    def create_local_model(self) -> Any:
+        """Create the configured local model for main.py's streaming routine."""
         if not self.profile.local_model_path:
             raise LLMError("local requires 'local_model_path' pointing to a GGUF file.")
         model_path = Path(self.profile.local_model_path).expanduser()
@@ -183,21 +187,9 @@ class LLMManager:
         except ImportError as error:
             raise LLMError("Local mode requires: pip install llama-cpp-python") from error
         try:
-            llm = Llama(model_path=str(model_path), **self.profile.local_options)
-            messages = ([{"role": "system", "content": system}] if system else []) + [
-                {"role": "user", "content": prompt}
-            ]
-            response = llm.create_chat_completion(
-                messages=messages,
-                temperature=self.profile.temperature,
-                max_tokens=self.profile.max_tokens,
-            )
-            content = response["choices"][0]["message"]["content"]
+            return Llama(model_path=str(model_path), **self.profile.local_options)
         except Exception as error:
             raise LLMError(f"Local model failed: {error}") from error
-        if not isinstance(content, str) or not content:
-            raise LLMError("Local model returned an empty response.")
-        return content
 
     def _require_api_key(self) -> str:
         key = self.profile.resolved_api_key

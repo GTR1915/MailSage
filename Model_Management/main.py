@@ -156,15 +156,24 @@ def summarize_email(
 def stream_email_summary(
     llm: Llama, subject: str, sender: str, recipient: str, body: str
 ) -> Iterator[str]:
-    """Yield local-model text as it is generated without changing the prompt."""
+    """Yield a summary for one email using the shared local-model routine."""
     user_message = email_to_message(subject, sender, recipient, body)
-    max_tokens, _ = output_token_budget(llm, SYSTEM_PROMPT, user_message)
+    yield from stream_local_summary(llm, SYSTEM_PROMPT, user_message)
+
+
+def stream_local_summary(
+    llm: Llama, system_prompt: str, user_message: str
+) -> Iterator[str]:
+    """Generate a direct local-model answer with Qwen thinking disabled.
+
+    This is intentionally the one local generation path shared by the command
+    line summarizer and the website's LLM manager.
+    """
+    max_tokens, _ = output_token_budget(llm, system_prompt, user_message)
     response = llm.create_chat_completion(
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            # {"role": "user", "content": user_message},
-            {"role": "user", "content": user_message + "\n/no_think"},   # To diable thinking
-
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message + "\n/no_think"},
         ],
         temperature=0.1,
         max_tokens=max_tokens,
