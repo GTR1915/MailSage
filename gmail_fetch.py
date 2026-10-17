@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
@@ -30,17 +31,33 @@ def parse_datetime(value: str) -> datetime:
     return parsed_value.astimezone(timezone.utc)
 
 
-def get_gmail_service(credentials_path: Path, token_path: Path) -> Resource:
+def get_gmail_service(
+    credentials_path: Path, token_path: Path, *, force_reauth: bool = False
+) -> Resource:
+    """Return an authorized Gmail service, renewing or replacing stale credentials.
+
+    Google can revoke a refresh token at any time.  Treat a failed refresh just
+    like a missing token so callers can immediately start a new consent flow.
+    """
     credentials: Credentials | None = None
-    if token_path.exists():
-        credentials = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+    if token_path.exists() and not force_reauth:
+        try:
+            credentials = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+        except (OSError, ValueError):
+            # A partial or manually edited token file cannot be reused.
+            credentials = None
 
     if credentials and not credentials.has_scopes(SCOPES):
         credentials = None
 
     if credentials and credentials.expired and credentials.refresh_token:
-        credentials.refresh(Request())
-    elif not credentials or not credentials.valid:
+        try:
+            credentials.refresh(Request())
+        except RefreshError:
+            # invalid_grant means the refresh token expired or was revoked.
+            credentials = None
+
+    if not credentials or not credentials.valid:
         if not credentials_path.exists():
             raise FileNotFoundError(
                 f"OAuth client configuration was not found: {credentials_path}. "

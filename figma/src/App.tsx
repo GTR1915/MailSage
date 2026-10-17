@@ -184,12 +184,12 @@ type LlmSettings = {
 }
 
 const AI_PROVIDERS: { id: AIProvider; label: string; description: string; icon: IconName }[] = [
-  { id: "local", label: "Local LLM", description: "Run a GGUF model on this device", icon: "file" },
   { id: "openai", label: "OpenAI", description: "Connect with an OpenAI API key", icon: "sparkles" },
   { id: "gemini", label: "Gemini", description: "Use Google Gemini models", icon: "grid" },
   { id: "openrouter", label: "OpenRouter", description: "Choose from many hosted models", icon: "external" },
   { id: "openrouter-free", label: "OpenRouter Free", description: "Use an OpenRouter :free model", icon: "star" },
   { id: "other-api", label: "Other API", description: "Any OpenAI-compatible endpoint", icon: "settings" },
+  { id: "local", label: "Local LLM", description: "Run a GGUF model on this device", icon: "file" },
 ]
 
 const DEFAULT_MODELS: Record<AIProvider, string> = {
@@ -427,6 +427,7 @@ export default function App() {
   const panelResizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
+  const [connectedEmail, setConnectedEmail] = useState<string | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
   const [aiProvider, setAiProvider] = useState<AIProvider>("local")
   const [modelName, setModelName] = useState(DEFAULT_MODELS.local)
@@ -522,7 +523,36 @@ export default function App() {
   }, [aiPanelWidth])
   useEffect(() => {
     void loadLlmSettings()
+    void loadGmailStatus()
   }, [])
+
+  async function loadGmailStatus() {
+    try {
+      const response = await fetch("/api/gmail/status")
+      const status = (await response.json()) as { connected?: boolean; email?: string }
+      if (response.ok && status.connected && status.email) setConnectedEmail(status.email)
+    } catch {
+      // The normal disconnected state is the useful fallback while the local API starts.
+    }
+  }
+
+  async function connectGmail() {
+    setFetching(true)
+    notify("Complete the Google permission prompt in your browser to connect Gmail.")
+    try {
+      const response = await fetch("/api/gmail/connect", { method: "POST" })
+      const result = (await response.json()) as { connected?: boolean; email?: string; error?: string }
+      if (!response.ok || !result.connected || !result.email) {
+        throw new Error(result.error || "Gmail could not be connected.")
+      }
+      setConnectedEmail(result.email)
+      notify(`Gmail connected as ${result.email}.`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Gmail could not be connected.")
+    } finally {
+      setFetching(false)
+    }
+  }
 
   async function loadLlmSettings() {
     try {
@@ -869,10 +899,11 @@ export default function App() {
             </div>
             <button
               className="button secondary connect-button"
-              onClick={() => setModal("settings")}
+              onClick={() => void connectGmail()}
+              disabled={fetching}
             >
               <GmailMark />
-              <span>Connect Gmail</span>
+              <span>{connectedEmail ? "Gmail Connected" : "Connect Gmail"}</span>
               <Icon name="external" size={14} />
             </button>
           </div>
@@ -1440,9 +1471,17 @@ export default function App() {
                 <div className="provider-config"><div className="provider-config-heading"><span className="provider-icon large"><Icon name={AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.icon || "sparkles"} size={19} /></span><div><h3>{AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.label} configuration</h3><p>{aiProvider === "local" ? "Enter the path to the GGUF model on this computer." : "Credentials are saved only by your local Gmail Analyzer backend."}</p></div></div>
                   {aiProvider === "local" ? <div className="local-model-fields"><label className="settings-field"><span>Local GGUF model path</span><input value={localModelPath} onChange={(event) => setLocalModelPath(event.target.value)} placeholder="C:/models/your-model.gguf" /><small>The backend opens this path using llama-cpp-python.</small></label></div> : <div className="api-provider-fields"><label className="settings-field"><span>Model ID</span><input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Enter a provider model ID" /></label><label className="settings-field"><span>API key</span><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={apiKeyConfigured ? "Saved locally — leave blank to keep it" : "Enter your private API key"} autoComplete="off" spellCheck={false} /><small>{apiKeyConfigured ? "A key is already saved. Enter a value only to replace it." : "Stored locally in .secrets and never returned to this browser."}</small></label>{aiProvider === "other-api" && <label className="settings-field"><span>Chat Completions URL</span><input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://provider.example/v1/chat/completions" /></label>}<div className="settings-note"><Icon name="shield" size={15} /><p>Selected email content is sent only to the provider you save here. OpenRouter Free models must use a model ID ending in <code>:free</code>.</p></div></div>}
                 </div>
-                <div className="gmail-settings-row">
+                <div className={`gmail-settings-row ${connectedEmail ? "connected" : "not-connected"}`}>
                   <span className="tiny-dot" />
-                  Demo mode · No Google account connected
+                  <div className="gmail-settings-copy">
+                      <strong>{connectedEmail ? "Email connected" : "Email not connected"}</strong>
+                      <span>{connectedEmail || "Connect an email account to fetch and analyze messages."}</span>
+                  </div>
+                  {connectedEmail ? (
+                    <button className="remove-email-button" onClick={() => setConnectedEmail(null)}>Remove</button>
+                  ) : (
+                    <button className="connect-email-button" onClick={() => void connectGmail()} disabled={fetching}>Connect email</button>
+                  )}
                 </div>
                 <div className="settings-actions">
                   <button className="button secondary" onClick={() => setModal(null)}>Cancel</button>
