@@ -873,7 +873,7 @@ export default function App() {
               onClick={() => setModal("settings")}
             >
               <GmailMark />
-              <span>Connect Gmail</span>
+              <span>{connectedEmail ? "Gmail Connected" : "Connect Gmail"}</span>
               <Icon name="external" size={14} />
             </button>
           </div>
