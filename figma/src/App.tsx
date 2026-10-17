@@ -523,7 +523,36 @@ export default function App() {
   }, [aiPanelWidth])
   useEffect(() => {
     void loadLlmSettings()
+    void loadGmailStatus()
   }, [])
+
+  async function loadGmailStatus() {
+    try {
+      const response = await fetch("/api/gmail/status")
+      const status = (await response.json()) as { connected?: boolean; email?: string }
+      if (response.ok && status.connected && status.email) setConnectedEmail(status.email)
+    } catch {
+      // The normal disconnected state is the useful fallback while the local API starts.
+    }
+  }
+
+  async function connectGmail() {
+    setFetching(true)
+    notify("Complete the Google permission prompt in your browser to connect Gmail.")
+    try {
+      const response = await fetch("/api/gmail/connect", { method: "POST" })
+      const result = (await response.json()) as { connected?: boolean; email?: string; error?: string }
+      if (!response.ok || !result.connected || !result.email) {
+        throw new Error(result.error || "Gmail could not be connected.")
+      }
+      setConnectedEmail(result.email)
+      notify(`Gmail connected as ${result.email}.`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Gmail could not be connected.")
+    } finally {
+      setFetching(false)
+    }
+  }
 
   async function loadLlmSettings() {
     try {
@@ -870,7 +899,8 @@ export default function App() {
             </div>
             <button
               className="button secondary connect-button"
-              onClick={() => setModal("settings")}
+              onClick={() => void connectGmail()}
+              disabled={fetching}
             >
               <GmailMark />
               <span>{connectedEmail ? "Gmail Connected" : "Connect Gmail"}</span>
@@ -1444,13 +1474,13 @@ export default function App() {
                 <div className={`gmail-settings-row ${connectedEmail ? "connected" : "not-connected"}`}>
                   <span className="tiny-dot" />
                   <div className="gmail-settings-copy">
-                    <strong>{connectedEmail ? "Email connected" : "Email not connected"}</strong>
-                    <span>{connectedEmail || "Connect an email account to fetch and analyze messages."}</span>
+                      <strong>{connectedEmail ? "Email connected" : "Email not connected"}</strong>
+                      <span>{connectedEmail || "Connect an email account to fetch and analyze messages."}</span>
                   </div>
                   {connectedEmail ? (
                     <button className="remove-email-button" onClick={() => setConnectedEmail(null)}>Remove</button>
                   ) : (
-                    <button className="connect-email-button" onClick={() => setConnectedEmail("piyushgtr1915@gmail.com")}>Connect email</button>
+                    <button className="connect-email-button" onClick={() => void connectGmail()} disabled={fetching}>Connect email</button>
                   )}
                 </div>
                 <div className="settings-actions">

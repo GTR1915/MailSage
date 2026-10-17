@@ -11,6 +11,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from googleapiclient.errors import HttpError
+
 from gmail_cache import GmailCache, fetch_with_cache
 from gmail_fetch import get_gmail_service, parse_datetime
 from llm_manager import LLMError, LLMManager
@@ -150,6 +152,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(error)})
             return
 
+        if self.path == "/api/gmail/status":
+            self._gmail_status()
+            return
+
         if self.path.startswith("/api/fetch/"):
             job_id = self.path.rsplit("/", maxsplit=1)[-1]
             with JOBS_LOCK:
@@ -163,6 +169,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if self.path == "/api/gmail/connect":
+            self._connect_gmail()
+            return
+
         if self.path == "/api/llm-settings":
             self._save_llm_settings()
             return
@@ -205,6 +215,65 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.OK, profile)
         except (ValueError, json.JSONDecodeError, LLMError) as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+
+    @staticmethod
+    def _gmail_paths() -> tuple[Path, Path]:
+        return (
+            PROJECT_ROOT / "credentials.json",
+            PROJECT_ROOT / ".secrets" / "gmail-token.json",
+        )
+
+    def _gmail_status(self) -> None:
+        """Report an already usable connection without opening a browser."""
+        credentials_path, token_path = self._gmail_paths()
+        if not token_path.exists():
+            self._send_json(HTTPStatus.OK, {"connected": False})
+            return
+        try:
+            # Do not refresh here: a user action on Connect Gmail should be what
+            # starts consent when the saved token has expired.
+            from google.oauth2.credentials import Credentials
+
+            credentials = Credentials.from_authorized_user_file(str(token_path), ["https://www.googleapis.com/auth/gmail.modify"])
+            if credentials.expired or not credentials.valid:
+                self._send_json(HTTPStatus.OK, {"connected": False})
+                return
+            service = get_gmail_service(credentials_path, token_path)
+            profile = service.users().getProfile(userId="me").execute()
+            self._send_json(HTTPStatus.OK, {"connected": True, "email": profile.get("emailAddress")})
+        except (OSError, ValueError, HttpError):
+            self._send_json(HTTPStatus.OK, {"connected": False})
+
+    def _connect_gmail(self) -> None:
+        """Open Google consent if no usable token exists, then return its account."""
+        credentials_path, token_path = self._gmail_paths()
+        try:
+            force_reauth = not token_path.exists()
+            if not force_reauth:
+                from google.oauth2.credentials import Credentials
+
+                try:
+                    saved = Credentials.from_authorized_user_file(
+                        str(token_path), ["https://www.googleapis.com/auth/gmail.modify"]
+                    )
+                    force_reauth = saved.expired or not saved.valid
+                except (OSError, ValueError):
+                    force_reauth = True
+            service = get_gmail_service(
+                credentials_path, token_path, force_reauth=force_reauth
+            )
+            try:
+                profile = service.users().getProfile(userId="me").execute()
+            except HttpError as error:
+                # A revoked access token can appear locally valid until Gmail is
+                # contacted. Discard it and explicitly restart OAuth consent.
+                if error.resp.status not in (401, 403):
+                    raise
+                service = get_gmail_service(credentials_path, token_path, force_reauth=True)
+                profile = service.users().getProfile(userId="me").execute()
+            self._send_json(HTTPStatus.OK, {"connected": True, "email": profile.get("emailAddress")})
+        except (FileNotFoundError, OSError, ValueError, HttpError) as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"Could not connect Gmail: {error}"})
 
     def _analyze(self) -> None:
         """Analyze selected messages through the LLM manager and stream each result."""
