@@ -42,7 +42,7 @@ The checker uses the default system prompt from `main.py` unless you override it
 
 In the website API, the former 50,000-character per-email body rejection has been removed. The API still limits the total JSON request size to 5 MB and the model still has its fixed context window.
 
-`main.py` asks the model not to include reasoning in its response, but it does not explicitly disable the model's internal thinking mode. The checker uses that same prompt by default; a custom system prompt can change what the model is asked to output.
+The Qwen3 local model uses the one shared generation routine in `Model_Management/main.py` for both the checker and website. It appends Qwen's `/no_think` control token to each local-model request, selecting direct-answer mode so the model does not spend output tokens producing a reasoning trace.
 
 Do not commit `credentials.json` or `.secrets/gmail-token.json`; they authorize access to the mailbox.
 
