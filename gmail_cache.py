@@ -27,6 +27,10 @@ class GmailCache:
     def __init__(self, database_path: Path) -> None:
         self.database_path = database_path
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
+        self.ensure_schema()
+
+    def ensure_schema(self) -> None:
+        """Create the cache tables when opening a new or manually removed database."""
         with self._connect() as connection:
             connection.executescript(
                 """
@@ -44,6 +48,13 @@ class GmailCache:
                 );
                 """
             )
+
+    def clear(self) -> None:
+        """Remove all mailbox data but retain the SQLite schema for the next login."""
+        self.ensure_schema()
+        with self._connect() as connection:
+            connection.execute("DELETE FROM messages")
+            connection.execute("DELETE FROM coverage")
 
     def get_missing_intervals(
         self, start: datetime, end: datetime
@@ -169,6 +180,7 @@ def fetch_with_cache(
     force_refresh: bool,
     progress: ProgressCallback | None = None,
 ) -> FetchResult:
+    cache.ensure_schema()
     intervals = [(start, end)] if force_refresh else cache.get_missing_intervals(start, end)
     if not intervals:
         messages = cache.read_messages(start, end)

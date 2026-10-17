@@ -40,6 +40,7 @@ input::placeholder { color: #a0a0b0; }
 .brand-dot { color: #a99aff; margin-left: -8px; }
 .workspace { display: flex; align-items: center; gap: 10px; padding: 12px 10px; margin-top: 31px; border: 1px solid #ffffff12; border-radius: 10px; background: #ffffff04; }
 .workspace-avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; font-size: 13px; font-weight: 600; background: #343042; color: #c8baff; border: 1px solid #c7aaff20; }
+.user-photo { object-fit: cover; color: transparent; }
 .workspace div { flex: 1; }
 .workspace strong { display: block; font-size: 11px; font-weight: 550; color: #e0dfed; white-space: nowrap; }
 .workspace div span { display: block; margin-top: 4px; font-size: 10px; color: #8f8d9f; }

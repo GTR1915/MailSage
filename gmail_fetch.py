@@ -17,8 +17,12 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
-
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.modify",
+    "openid",
+    "https://www.googleapis.com/auth/userinfo.profile",
+    "https://www.googleapis.com/auth/userinfo.email",
+]
 
 def parse_datetime(value: str) -> datetime:
     """Parse an ISO-8601 time and normalize it to UTC."""
@@ -42,7 +46,7 @@ def get_gmail_service(
     credentials: Credentials | None = None
     if token_path.exists() and not force_reauth:
         try:
-            credentials = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+            credentials = Credentials.from_authorized_user_file(str(token_path))
         except (OSError, ValueError):
             # A partial or manually edited token file cannot be reused.
             credentials = None
