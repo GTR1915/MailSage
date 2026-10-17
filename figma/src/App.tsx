@@ -173,6 +173,13 @@ type FetchJob = {
   error?: string
 }
 
+type GmailUser = {
+  email?: string
+  first_name?: string
+  last_name?: string
+  picture?: string
+}
+
 type AIProvider = "local" | "openai" | "gemini" | "openrouter" | "openrouter-free" | "other-api"
 
 type LlmSettings = {
@@ -428,6 +435,7 @@ export default function App() {
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
   const [connectedEmail, setConnectedEmail] = useState<string | null>(null)
+  const [gmailUser, setGmailUser] = useState<GmailUser | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
   const [aiProvider, setAiProvider] = useState<AIProvider>("local")
   const [modelName, setModelName] = useState(DEFAULT_MODELS.local)
@@ -446,6 +454,13 @@ export default function App() {
         .includes(query.toLowerCase()),
   )
   const unread = fetched.filter((e) => e.unread && !read.includes(e.id)).length
+  const fullName = [gmailUser?.first_name, gmailUser?.last_name].filter(Boolean).join(" ") || connectedEmail || "Your account"
+  const firstName = gmailUser?.first_name || fullName.split(" ")[0] || "Your"
+  const initials = [gmailUser?.first_name, gmailUser?.last_name]
+    .filter(Boolean)
+    .map((name) => name![0])
+    .join("")
+    .toUpperCase() || "?"
   function notify(message: string) {
     setNotice(message)
     window.setTimeout(() => setNotice(""), 4500)
@@ -529,8 +544,11 @@ export default function App() {
   async function loadGmailStatus() {
     try {
       const response = await fetch("/api/gmail/status")
-      const status = (await response.json()) as { connected?: boolean; email?: string }
-      if (response.ok && status.connected && status.email) setConnectedEmail(status.email)
+      const status = (await response.json()) as GmailUser & { connected?: boolean }
+      if (response.ok && status.connected && status.email) {
+        setConnectedEmail(status.email)
+        setGmailUser(status)
+      }
     } catch {
       // The normal disconnected state is the useful fallback while the local API starts.
     }
@@ -541,14 +559,44 @@ export default function App() {
     notify("Complete the Google permission prompt in your browser to connect Gmail.")
     try {
       const response = await fetch("/api/gmail/connect", { method: "POST" })
-      const result = (await response.json()) as { connected?: boolean; email?: string; error?: string }
+      const result = (await response.json()) as GmailUser & { connected?: boolean; error?: string }
       if (!response.ok || !result.connected || !result.email) {
         throw new Error(result.error || "Gmail could not be connected.")
       }
       setConnectedEmail(result.email)
+      setGmailUser(result)
       notify(`Gmail connected as ${result.email}.`)
     } catch (error) {
       notify(error instanceof Error ? error.message : "Gmail could not be connected.")
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  async function logoutGmail() {
+    setFetching(true)
+    try {
+      const response = await fetch("/api/gmail/logout", { method: "POST" })
+      const result = (await response.json()) as { logged_out?: boolean; error?: string }
+      if (!response.ok || !result.logged_out) {
+        throw new Error(result.error || "Gmail could not be logged out.")
+      }
+      setConnectedEmail(null)
+      setGmailUser(null)
+      setEmails([])
+      setSelected([])
+      setStars([])
+      setRead([])
+      setActiveEmail(null)
+      setAnalyzed([])
+      setStreamedSummary("")
+      setActiveStreamId("")
+      setStreamedById({})
+      setRevealedById({})
+      setModal(null)
+      notify("Logged out of Gmail. Connect again to authorize a mailbox.")
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Gmail could not be logged out.")
     } finally {
       setFetching(false)
     }
@@ -783,10 +831,10 @@ export default function App() {
           Mailsage<span className="brand-dot"></span>
         </a>
         <div className="workspace">
-          <span className="workspace-avatar">PS</span>
+          {gmailUser?.picture ? <img className="workspace-avatar user-photo" src={gmailUser.picture} alt="" /> : <span className="workspace-avatar">{initials}</span>}
           <div>
-            <strong>Piyush’s workspace</strong>
-            <span>Personal account</span>
+            <strong>{firstName}’s workspace</strong>
+            <span>{connectedEmail || "Personal account"}</span>
           </div>
           <Icon name="chevron" size={15} className="rotate-down" />
         </div>
@@ -836,10 +884,10 @@ export default function App() {
             <Icon name="external" size={13} />
           </button>
           <div className="profile">
-            <span className="profile-avatar">PS</span>
+            {gmailUser?.picture ? <img className="profile-avatar user-photo" src={gmailUser.picture} alt="" /> : <span className="profile-avatar">{initials}</span>}
             <div>
-              <strong>Piyush Singh</strong>
-              <span>piyushgtr1915@gmail.com</span>
+              <strong>{fullName}</strong>
+              <span>{connectedEmail || "Not connected"}</span>
             </div>
             <button
               className="icon-button"
@@ -879,7 +927,7 @@ export default function App() {
               <Icon name="bell" size={19} />
               <i />
             </button>
-            <span className="profile-avatar small">AL</span>
+            {gmailUser?.picture ? <img className="profile-avatar small user-photo" src={gmailUser.picture} alt="" /> : <span className="profile-avatar small">{initials}</span>}
           </div>
         </header>
         <main>
@@ -1478,9 +1526,9 @@ export default function App() {
                       <span>{connectedEmail || "Connect an email account to fetch and analyze messages."}</span>
                   </div>
                   {connectedEmail ? (
-                    <button className="remove-email-button" onClick={() => setConnectedEmail(null)}>Remove</button>
+                    <button className="remove-email-button" onClick={() => void logoutGmail()} disabled={fetching || analyzing}>Logout</button>
                   ) : (
-                    <button className="connect-email-button" onClick={() => void connectGmail()} disabled={fetching}>Connect email</button>
+                    <button className="connect-email-button" onClick={() => void connectGmail()} disabled={fetching}>Login</button>
                   )}
                 </div>
                 <div className="settings-actions">

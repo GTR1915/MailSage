@@ -10,11 +10,16 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.request import Request as UrlRequest, urlopen
 
+from google.oauth2.credentials import Credentials
+from google.auth.exceptions import RefreshError
+from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from gmail_cache import GmailCache, fetch_with_cache
-from gmail_fetch import get_gmail_service, parse_datetime
+from gmail_fetch import SCOPES, get_gmail_service, parse_datetime
 from llm_manager import LLMError, LLMManager
 from Model_Management.main import (
     SYSTEM_PROMPT,
@@ -29,6 +34,8 @@ from Model_Management.model_config import MODEL_PATH
 PROJECT_ROOT = Path(__file__).resolve().parent
 CACHE = GmailCache(PROJECT_ROOT / ".data" / "gmail-cache.sqlite3")
 LLM_SETTINGS_PATH = PROJECT_ROOT / ".secrets" / "llm-settings.json"
+PROFILE_PHOTO_PATH = PROJECT_ROOT / ".data" / "gmail-profile-photo"
+PROFILE_PHOTO_METADATA_PATH = PROJECT_ROOT / ".data" / "gmail-profile-photo.json"
 
 DEFAULT_LLM_PROFILE: dict[str, Any] = {
     "provider": "local",
@@ -157,6 +164,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             self._gmail_status()
             return
 
+        if self.path == "/api/gmail/profile-photo":
+            self._send_profile_photo()
+            return
+
         if self.path.startswith("/api/fetch/"):
             job_id = self.path.rsplit("/", maxsplit=1)[-1]
             with JOBS_LOCK:
@@ -170,6 +181,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if self.path == "/api/gmail/logout":
+            self._logout_gmail()
+            return
+
         if self.path == "/api/gmail/connect":
             self._connect_gmail()
             return
@@ -226,23 +241,23 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
 
     def _gmail_status(self) -> None:
         """Report an already usable connection without opening a browser."""
-        credentials_path, token_path = self._gmail_paths()
+        _, token_path = self._gmail_paths()
         if not token_path.exists():
             self._send_json(HTTPStatus.OK, {"connected": False})
             return
         try:
             # Do not refresh here: a user action on Connect Gmail should be what
             # starts consent when the saved token has expired.
-            from google.oauth2.credentials import Credentials
-
-            credentials = Credentials.from_authorized_user_file(str(token_path), ["https://www.googleapis.com/auth/gmail.modify"])
-            if credentials.expired or not credentials.valid:
+            credentials = Credentials.from_authorized_user_file(str(token_path))
+            if (
+                credentials.expired
+                or not credentials.valid
+                or not credentials.has_scopes(SCOPES)
+            ):
                 self._send_json(HTTPStatus.OK, {"connected": False})
                 return
-            service = get_gmail_service(credentials_path, token_path)
-            profile = service.users().getProfile(userId="me").execute()
-            self._send_json(HTTPStatus.OK, {"connected": True, "email": profile.get("emailAddress")})
-        except (OSError, ValueError, HttpError):
+            self._send_json(HTTPStatus.OK, {"connected": True, **self._google_identity(credentials)})
+        except (OSError, ValueError, HttpError, RefreshError):
             self._send_json(HTTPStatus.OK, {"connected": False})
 
     def _connect_gmail(self) -> None:
@@ -251,30 +266,126 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         try:
             force_reauth = not token_path.exists()
             if not force_reauth:
-                from google.oauth2.credentials import Credentials
-
                 try:
-                    saved = Credentials.from_authorized_user_file(
-                        str(token_path), ["https://www.googleapis.com/auth/gmail.modify"]
+                    saved = Credentials.from_authorized_user_file(str(token_path))
+                    force_reauth = (
+                        saved.expired
+                        or not saved.valid
+                        or not saved.has_scopes(SCOPES)
                     )
-                    force_reauth = saved.expired or not saved.valid
                 except (OSError, ValueError):
                     force_reauth = True
-            service = get_gmail_service(
+            get_gmail_service(
                 credentials_path, token_path, force_reauth=force_reauth
             )
             try:
-                profile = service.users().getProfile(userId="me").execute()
-            except HttpError as error:
+                credentials = Credentials.from_authorized_user_file(str(token_path))
+                identity = self._google_identity(credentials)
+            except (HttpError, RefreshError) as error:
                 # A revoked access token can appear locally valid until Gmail is
-                # contacted. Discard it and explicitly restart OAuth consent.
-                if error.resp.status not in (401, 403):
+                # contacted. A changed scope set can fail the same way during
+                # token refresh. In both cases, restart OAuth consent.
+                if isinstance(error, HttpError) and error.resp.status not in (401, 403):
                     raise
-                service = get_gmail_service(credentials_path, token_path, force_reauth=True)
-                profile = service.users().getProfile(userId="me").execute()
-            self._send_json(HTTPStatus.OK, {"connected": True, "email": profile.get("emailAddress")})
-        except (FileNotFoundError, OSError, ValueError, HttpError) as error:
+                get_gmail_service(credentials_path, token_path, force_reauth=True)
+                credentials = Credentials.from_authorized_user_file(str(token_path))
+                identity = self._google_identity(credentials)
+            self._send_json(HTTPStatus.OK, {"connected": True, **identity})
+        except (FileNotFoundError, OSError, ValueError, HttpError, RefreshError) as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"Could not connect Gmail: {error}"})
+
+    @staticmethod
+    def _google_identity(credentials: Credentials) -> dict[str, str | None]:
+        """Return the signed-in user's public Google profile fields."""
+        profile = (
+            build("oauth2", "v2", credentials=credentials, cache_discovery=False)
+            .userinfo()
+            .get()
+            .execute()
+        )
+        picture = profile.get("picture")
+        return {
+            "email": profile.get("email"),
+            "first_name": profile.get("given_name"),
+            "last_name": profile.get("family_name"),
+            # Do not expose Google's photo URL to the browser: it can throttle
+            # repeated client-side image requests with HTTP 429.
+            "picture": GmailRequestHandler._cache_profile_photo(picture),
+        }
+
+    @staticmethod
+    def _cache_profile_photo(picture_url: Any) -> str | None:
+        if not isinstance(picture_url, str) or not picture_url.startswith("https://"):
+            return None
+        try:
+            if PROFILE_PHOTO_PATH.exists() and PROFILE_PHOTO_METADATA_PATH.exists():
+                metadata = json.loads(PROFILE_PHOTO_METADATA_PATH.read_text(encoding="utf-8"))
+                if metadata.get("source_url") == picture_url:
+                    return "/api/gmail/profile-photo"
+
+            request = UrlRequest(picture_url, headers={"User-Agent": "Gmail Analyzer/1.0"})
+            with urlopen(request, timeout=10) as response:
+                content_type = response.headers.get_content_type()
+                image = response.read(2_000_001)
+            if not content_type.startswith("image/") or len(image) > 2_000_000:
+                return None
+            PROFILE_PHOTO_PATH.parent.mkdir(parents=True, exist_ok=True)
+            PROFILE_PHOTO_PATH.write_bytes(image)
+            PROFILE_PHOTO_METADATA_PATH.write_text(
+                json.dumps({"source_url": picture_url, "content_type": content_type}),
+                encoding="utf-8",
+            )
+            return "/api/gmail/profile-photo"
+        except (HTTPError, URLError, OSError, ValueError, json.JSONDecodeError):
+            return None
+
+    def _send_profile_photo(self) -> None:
+        if not PROFILE_PHOTO_PATH.exists() or not PROFILE_PHOTO_METADATA_PATH.exists():
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        try:
+            metadata = json.loads(PROFILE_PHOTO_METADATA_PATH.read_text(encoding="utf-8"))
+            content_type = metadata.get("content_type")
+            if not isinstance(content_type, str) or not content_type.startswith("image/"):
+                raise ValueError("Invalid cached profile photo metadata.")
+            image = PROFILE_PHOTO_PATH.read_bytes()
+        except (OSError, ValueError, json.JSONDecodeError):
+            self.send_error(HTTPStatus.NOT_FOUND)
+            return
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(image)))
+        self.send_header("Cache-Control", "private, max-age=3600")
+        self.end_headers()
+        self.wfile.write(image)
+
+    def _logout_gmail(self) -> None:
+        """Remove the local Gmail authorization and all locally cached mailbox data."""
+        _, token_path = self._gmail_paths()
+        gmail_data_paths = (
+            token_path,
+            PROJECT_ROOT / "emails.jsonl",
+            PROFILE_PHOTO_PATH,
+            PROFILE_PHOTO_METADATA_PATH,
+        )
+        removed: list[str] = []
+        try:
+            # Keep the empty database schema in place. Deleting the SQLite file
+            # while this server is running leaves the existing cache object
+            # connected to a new database with no tables.
+            CACHE.clear()
+            removed.append(CACHE.database_path.name)
+            for path in gmail_data_paths:
+                if path.exists():
+                    path.unlink()
+                    removed.append(path.name)
+        except OSError as error:
+            self._send_json(
+                HTTPStatus.INTERNAL_SERVER_ERROR,
+                {"error": f"Could not remove local Gmail data: {error}"},
+            )
+            return
+        self._send_json(HTTPStatus.OK, {"logged_out": True, "removed": removed})
 
     def _analyze(self) -> None:
         """Analyze selected messages through the LLM manager and stream each result."""
