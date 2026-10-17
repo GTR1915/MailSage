@@ -173,6 +173,51 @@ type FetchJob = {
   error?: string
 }
 
+type AIProvider = "local" | "openai" | "gemini" | "openrouter" | "openrouter-free" | "other-api"
+
+type LlmSettings = {
+  provider: AIProvider
+  model: string
+  api_key_configured?: boolean
+  base_url?: string
+  local_model_path?: string
+}
+
+const AI_PROVIDERS: { id: AIProvider; label: string; description: string; icon: IconName }[] = [
+  { id: "local", label: "Local LLM", description: "Run a GGUF model on this device", icon: "file" },
+  { id: "openai", label: "OpenAI", description: "Connect with an OpenAI API key", icon: "sparkles" },
+  { id: "gemini", label: "Gemini", description: "Use Google Gemini models", icon: "grid" },
+  { id: "openrouter", label: "OpenRouter", description: "Choose from many hosted models", icon: "external" },
+  { id: "openrouter-free", label: "OpenRouter Free", description: "Use an OpenRouter :free model", icon: "star" },
+  { id: "other-api", label: "Other API", description: "Any OpenAI-compatible endpoint", icon: "settings" },
+]
+
+const DEFAULT_MODELS: Record<AIProvider, string> = {
+  local: "local-qwen",
+  openai: "gpt-5-mini",
+  gemini: "gemini-2.5-flash",
+  openrouter: "openai/gpt-5-mini",
+  "openrouter-free": "meta-llama/llama-3.3-70b-instruct:free",
+  "other-api": "model-id-from-provider",
+}
+
+const API_PROVIDER_NAMES: Record<Exclude<AIProvider, "local">, string> = {
+  openai: "openai",
+  gemini: "gemini",
+  openrouter: "openrouter",
+  "openrouter-free": "openrouter/free",
+  "other-api": "openai_compatible",
+}
+
+const UI_PROVIDER_NAMES: Record<string, AIProvider> = {
+  local: "local",
+  openai: "openai",
+  gemini: "gemini",
+  openrouter: "openrouter",
+  "openrouter/free": "openrouter-free",
+  openai_compatible: "other-api",
+}
+
 type AiAnalysis = {
   id: string
   markdown: string
@@ -383,6 +428,13 @@ export default function App() {
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
+  const [aiProvider, setAiProvider] = useState<AIProvider>("local")
+  const [modelName, setModelName] = useState(DEFAULT_MODELS.local)
+  const [apiKey, setApiKey] = useState("")
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false)
+  const [localModelPath, setLocalModelPath] = useState("")
+  const [baseUrl, setBaseUrl] = useState("")
+  const [savingSettings, setSavingSettings] = useState(false)
   const fetched = emails
   const visible = fetched.filter(
     (e) =>
@@ -468,6 +520,76 @@ export default function App() {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [aiPanelWidth])
+  useEffect(() => {
+    void loadLlmSettings()
+  }, [])
+
+  async function loadLlmSettings() {
+    try {
+      const response = await fetch("/api/llm-settings")
+      const settings = (await response.json()) as LlmSettings & { error?: string; provider: string }
+      if (!response.ok) throw new Error(settings.error || "Could not load AI settings.")
+      const provider = UI_PROVIDER_NAMES[settings.provider] || "local"
+      setAiProvider(provider)
+      setModelName(settings.model || DEFAULT_MODELS[provider])
+      setLocalModelPath(settings.local_model_path || "")
+      setBaseUrl(settings.base_url || "")
+      setApiKeyConfigured(Boolean(settings.api_key_configured))
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not load AI settings.")
+    }
+  }
+
+  function selectProvider(provider: AIProvider) {
+    setAiProvider(provider)
+    setModelName(DEFAULT_MODELS[provider])
+    setApiKey("")
+    setApiKeyConfigured(false)
+  }
+
+  async function saveAISettings() {
+    if (aiProvider === "local" && !localModelPath.trim()) {
+      notify("Enter the path to your local GGUF model.")
+      return
+    }
+    if (aiProvider !== "local" && !apiKey.trim() && !apiKeyConfigured) {
+      notify("Enter an API key before saving this provider.")
+      return
+    }
+    if (!modelName.trim()) {
+      notify("Enter a model ID before saving.")
+      return
+    }
+    if (aiProvider === "other-api" && !baseUrl.trim()) {
+      notify("Enter the provider's Chat Completions URL.")
+      return
+    }
+    setSavingSettings(true)
+    try {
+      const payload: Record<string, string> = {
+        provider: aiProvider === "local" ? "local" : API_PROVIDER_NAMES[aiProvider],
+        model: modelName.trim(),
+      }
+      if (aiProvider === "local") payload.local_model_path = localModelPath.trim()
+      if (aiProvider === "other-api") payload.base_url = baseUrl.trim()
+      if (apiKey.trim()) payload.api_key = apiKey.trim()
+      const response = await fetch("/api/llm-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+      const saved = (await response.json()) as LlmSettings & { error?: string }
+      if (!response.ok) throw new Error(saved.error || "Could not save AI settings.")
+      setApiKey("")
+      setApiKeyConfigured(Boolean(saved.api_key_configured))
+      setModal(null)
+      notify(`${AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.label} is ready for analysis.`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Could not save AI settings.")
+    } finally {
+      setSavingSettings(false)
+    }
+  }
   async function fetchEmails(forceRefresh = false) {
     if (!start || !end || start > end) {
       notify(
@@ -1237,14 +1359,14 @@ export default function App() {
           }}
         >
           <section
-            className="modal"
+            className={`modal ${modal === "settings" ? "settings-modal" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
               activeEmail
                 ? activeEmail.subject
                 : modal === "settings"
-                  ? "Account settings"
+                  ? "AI provider settings"
                   : "Getting started"
             }
             onClick={(e) => e.stopPropagation()}
@@ -1302,36 +1424,31 @@ export default function App() {
                 </div>
               </>
             ) : modal === "settings" ? (
-              <>
-                <span className="surface-icon">
-                  <GmailMark />
-                </span>
-                <h2>Connect your Gmail</h2>
-                <p className="modal-description">
-                  Fetching opens the Google sign-in page the first time. Your
-                  Gmail token is stored locally. The app reads your email and
-                  updates its read status when you open it or generate a summary.
-                </p>
-                <div className="integration-status">
+              <div className="settings-panel">
+                <div className="settings-heading">
+                  <span className="ai-icon"><Icon name="sparkles" size={20} /></span>
+                  <div><span className="settings-kicker">AI SETTINGS</span><h2>Choose how your copilot thinks.</h2><p>Switch between an on-device model and your preferred API provider.</p></div>
+                </div>
+                <div className="settings-section-heading"><div><h3>AI provider</h3><p>Select the engine used to analyze email.</p></div><span className="settings-status"><span className="tiny-dot" />{AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.label}</span></div>
+                <div className="provider-grid">
+                  {AI_PROVIDERS.map((provider) => (
+                    <button className={`provider-option ${aiProvider === provider.id ? "selected" : ""}`} key={provider.id} onClick={() => selectProvider(provider.id)} aria-pressed={aiProvider === provider.id}>
+                      <span className="provider-icon"><Icon name={provider.icon} size={17} /></span><span><strong>{provider.label}</strong><small>{provider.description}</small></span><span className="provider-radio">{aiProvider === provider.id && <span />}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="provider-config"><div className="provider-config-heading"><span className="provider-icon large"><Icon name={AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.icon || "sparkles"} size={19} /></span><div><h3>{AI_PROVIDERS.find((provider) => provider.id === aiProvider)?.label} configuration</h3><p>{aiProvider === "local" ? "Enter the path to the GGUF model on this computer." : "Credentials are saved only by your local Gmail Analyzer backend."}</p></div></div>
+                  {aiProvider === "local" ? <div className="local-model-fields"><label className="settings-field"><span>Local GGUF model path</span><input value={localModelPath} onChange={(event) => setLocalModelPath(event.target.value)} placeholder="C:/models/your-model.gguf" /><small>The backend opens this path using llama-cpp-python.</small></label></div> : <div className="api-provider-fields"><label className="settings-field"><span>Model ID</span><input value={modelName} onChange={(event) => setModelName(event.target.value)} placeholder="Enter a provider model ID" /></label><label className="settings-field"><span>API key</span><input type="password" value={apiKey} onChange={(event) => setApiKey(event.target.value)} placeholder={apiKeyConfigured ? "Saved locally — leave blank to keep it" : "Enter your private API key"} autoComplete="off" spellCheck={false} /><small>{apiKeyConfigured ? "A key is already saved. Enter a value only to replace it." : "Stored locally in .secrets and never returned to this browser."}</small></label>{aiProvider === "other-api" && <label className="settings-field"><span>Chat Completions URL</span><input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} placeholder="https://provider.example/v1/chat/completions" /></label>}<div className="settings-note"><Icon name="shield" size={15} /><p>Selected email content is sent only to the provider you save here. OpenRouter Free models must use a model ID ending in <code>:free</code>.</p></div></div>}
+                </div>
+                <div className="gmail-settings-row">
                   <span className="tiny-dot" />
                   Demo mode · No Google account connected
                 </div>
-                <h3>Designed with your privacy in mind</h3>
-                <p className="modal-description">
-                  This app analyzes only emails you choose with the local Qwen
-                  model. No content is sent to an AI service.
-                </p>
-                <button
-                  className="button primary full-width"
-                  onClick={() => {
-                    setModal(null)
-                    notify("Choose a time range and fetch your Gmail messages.")
-                  }}
-                >
-                  Choose a time range
-                  <Icon name="arrow" size={16} />
-                </button>
-              </>
+                <div className="settings-actions">
+                  <button className="button secondary" onClick={() => setModal(null)}>Cancel</button>
+                  <button className="button primary" onClick={() => void saveAISettings()} disabled={savingSettings}>{savingSettings ? "Saving…" : "Save AI settings"}<Icon name="arrow" size={15} /></button>
+                </div>
+              </div>
             ) : (
               <>
                 <span className="ai-icon">

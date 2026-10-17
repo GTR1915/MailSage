@@ -211,3 +211,6 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# py .\gmail_fetch.py --start "2026-10-04T00:00:00+05:30" --end "2026-10-06T00:00:00+05:30" --output .\test-emails.jsonl

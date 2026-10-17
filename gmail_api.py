@@ -13,15 +13,28 @@ from typing import Any
 
 from gmail_cache import GmailCache, fetch_with_cache
 from gmail_fetch import get_gmail_service, parse_datetime
+from llm_manager import LLMError, LLMManager
 from Model_Management.main import (
-    create_model,
+    SYSTEM_PROMPT,
+    email_to_message,
+    MODEL_CONTEXT_TOKENS,
     select_email_body,
-    stream_email_summary,
 )
+from Model_Management.model_config import MODEL_PATH
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 CACHE = GmailCache(PROJECT_ROOT / ".data" / "gmail-cache.sqlite3")
+LLM_SETTINGS_PATH = PROJECT_ROOT / ".secrets" / "llm-settings.json"
+
+DEFAULT_LLM_PROFILE: dict[str, Any] = {
+    "provider": "local",
+    "model": "local-qwen",
+    "local_model_path": str(MODEL_PATH),
+    "local_options": {"n_ctx": MODEL_CONTEXT_TOKENS, "n_gpu_layers": -1, "verbose": False},
+    "temperature": 0.1,
+    "max_tokens": 3072,
+}
 
 
 @dataclass
@@ -52,23 +65,89 @@ class FetchJob:
 
 JOBS: dict[str, FetchJob] = {}
 JOBS_LOCK = threading.Lock()
-MODEL_LOCK = threading.RLock()
-MODEL: Any | None = None
+LLM_SETTINGS_LOCK = threading.RLock()
 
 
-def get_model() -> Any:
-    """Create the local model once and reuse it for all analysis requests."""
-    global MODEL
-    with MODEL_LOCK:
-        if MODEL is None:
-            MODEL = create_model()
-        return MODEL
+def load_llm_profile() -> dict[str, Any]:
+    """Load the selected LLM profile, falling back to the existing local model."""
+    with LLM_SETTINGS_LOCK:
+        if not LLM_SETTINGS_PATH.exists():
+            return DEFAULT_LLM_PROFILE.copy()
+        try:
+            profile = json.loads(LLM_SETTINGS_PATH.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise ValueError("Saved LLM settings are invalid JSON.") from error
+    if not isinstance(profile, dict):
+        raise ValueError("Saved LLM settings must be a JSON object.")
+    return profile
+
+
+def public_llm_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Return settings the browser may see, deliberately omitting credentials."""
+    public = {key: value for key, value in profile.items() if key != "api_key"}
+    public["api_key_configured"] = bool(profile.get("api_key") or profile.get("api_key_env"))
+    return public
+
+
+def save_llm_profile(profile: dict[str, Any]) -> dict[str, Any]:
+    """Validate and persist one profile locally; retain a hidden existing key when blank."""
+    provider = profile.get("provider")
+    allowed_providers = {"local", "openai", "gemini", "openrouter", "openrouter/free", "openai_compatible"}
+    if provider not in allowed_providers:
+        raise ValueError("Choose a supported LLM provider.")
+    for field_name in ("model",):
+        value = profile.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"'{field_name}' is required.")
+    if provider == "local":
+        path = profile.get("local_model_path")
+        if not isinstance(path, str) or not path.strip():
+            raise ValueError("A local model path is required.")
+    elif provider == "openai_compatible":
+        url = profile.get("base_url")
+        if not isinstance(url, str) or not url.startswith(("https://", "http://")):
+            raise ValueError("Other API requires an http(s) Chat Completions URL.")
+
+    try:
+        existing = load_llm_profile()
+    except ValueError:
+        existing = {}
+    api_key = profile.get("api_key")
+    if api_key is not None and not isinstance(api_key, str):
+        raise ValueError("API key must be text.")
+    cleaned = {
+        key: value
+        for key, value in profile.items()
+        if key in {"provider", "model", "api_key", "base_url", "local_model_path", "temperature", "max_tokens", "timeout_seconds", "local_options"}
+        and value is not None
+    }
+    if provider != "local" and not str(api_key or "").strip():
+        old_key = existing.get("api_key")
+        if existing.get("provider") == provider and isinstance(old_key, str) and old_key:
+            cleaned["api_key"] = old_key
+        else:
+            raise ValueError("Enter an API key before saving this provider.")
+    if provider == "local":
+        cleaned.pop("api_key", None)
+        cleaned.setdefault("local_options", DEFAULT_LLM_PROFILE["local_options"])
+    LLMManager.from_profile(cleaned)  # Validate the profile shape before persisting it.
+    with LLM_SETTINGS_LOCK:
+        LLM_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        LLM_SETTINGS_PATH.write_text(json.dumps(cleaned, indent=2) + "\n", encoding="utf-8")
+    return public_llm_profile(cleaned)
 
 
 class GmailRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path == "/api/health":
             self._send_json(HTTPStatus.OK, {"status": "ok"})
+            return
+
+        if self.path == "/api/llm-settings":
+            try:
+                self._send_json(HTTPStatus.OK, public_llm_profile(load_llm_profile()))
+            except ValueError as error:
+                self._send_json(HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(error)})
             return
 
         if self.path.startswith("/api/fetch/"):
@@ -84,6 +163,10 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         self.send_error(HTTPStatus.NOT_FOUND)
 
     def do_POST(self) -> None:
+        if self.path == "/api/llm-settings":
+            self._save_llm_settings()
+            return
+
         if self.path == "/api/analyze":
             self._analyze()
             return
@@ -116,8 +199,15 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         except (ValueError, json.JSONDecodeError) as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
 
+    def _save_llm_settings(self) -> None:
+        try:
+            profile = save_llm_profile(self._read_json())
+            self._send_json(HTTPStatus.OK, profile)
+        except (ValueError, json.JSONDecodeError, LLMError) as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+
     def _analyze(self) -> None:
-        """Stream local model tokens so the browser can reveal summaries early."""
+        """Analyze selected messages through the LLM manager and stream each result."""
         try:
             payload = self._read_json(max_bytes=5_000_000)
             emails = payload.get("emails")
@@ -153,24 +243,19 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                     "body": body,
                 })
 
+            manager = LLMManager.from_profile(load_llm_profile())
             self._start_ndjson_stream()
-            # llama.cpp model instances are not safe to use concurrently.
-            with MODEL_LOCK:
-                model = get_model()
-                for email in prepared:
-                    self._send_ndjson({"type": "start", "id": email["id"]})
-                    content = ""
-                    for token in stream_email_summary(
-                        model, email["subject"], email["sender"], email["recipient"], email["body"]
-                    ):
-                        content += token
-                        self._send_ndjson({"type": "token", "id": email["id"], "content": token})
-                    if not content.strip():
-                        raise ValueError("The model returned an empty response.")
-                    self._send_ndjson({
-                        "type": "analysis",
-                        "analysis": {"id": email["id"], "markdown": content},
-                    })
+            for email in prepared:
+                self._send_ndjson({"type": "start", "id": email["id"]})
+                content = manager.chat(
+                    email_to_message(email["subject"], email["sender"], email["recipient"], email["body"]),
+                    system=SYSTEM_PROMPT,
+                )
+                self._send_ndjson({"type": "token", "id": email["id"], "content": content})
+                self._send_ndjson({
+                    "type": "analysis",
+                    "analysis": {"id": email["id"], "markdown": content},
+                })
             self._send_ndjson({"type": "complete"})
         except (FileNotFoundError, ValueError, json.JSONDecodeError) as error:
             if getattr(self, "_stream_started", False):
@@ -178,7 +263,7 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
         except Exception as error:
-            message = f"Local AI analysis failed: {error}"
+            message = f"AI analysis failed: {error}"
             if getattr(self, "_stream_started", False):
                 self._send_ndjson({"type": "error", "error": message})
             else:

@@ -145,6 +145,55 @@ type Email = {
   unread: boolean
   action?: string
 }
+
+type AIProvider = "local" | "openai" | "gemini" | "openrouter" | "openrouter-free"
+
+const AI_PROVIDERS: {
+  id: AIProvider
+  label: string
+  description: string
+  icon: IconName
+}[] = [
+  {
+    id: "local",
+    label: "Local LLM",
+    description: "Use a model stored on your device",
+    icon: "file",
+  },
+  {
+    id: "openai",
+    label: "OpenAI",
+    description: "Connect with an OpenAI API key",
+    icon: "sparkles",
+  },
+  {
+    id: "gemini",
+    label: "Gemini",
+    description: "Use Google Gemini models",
+    icon: "grid",
+  },
+  {
+    id: "openrouter",
+    label: "OpenRouter",
+    description: "Choose from multiple providers",
+    icon: "external",
+  },
+  {
+    id: "openrouter-free",
+    label: "OpenRouter Free",
+    description: "Use OpenRouter’s free model route",
+    icon: "star",
+  },
+]
+
+const DEFAULT_MODELS: Record<AIProvider, string> = {
+  local: "",
+  openai: "gpt-4o-mini",
+  gemini: "gemini-2.0-flash",
+  openrouter: "anthropic/claude-3.5-sonnet",
+  "openrouter-free": "openrouter/free",
+}
+
 const EMAILS: Email[] = [
   {
     id: 1,
@@ -293,6 +342,11 @@ export default function App() {
   const [notice, setNotice] = useState("")
   const [modal, setModal] = useState<"settings" | "help" | null>(null)
   const [dateMenu, setDateMenu] = useState(false)
+  const [aiProvider, setAiProvider] = useState<AIProvider>("local")
+  const [apiKey, setApiKey] = useState("")
+  const [modelName, setModelName] = useState("")
+  const [localModelPath, setLocalModelPath] = useState("")
+  const [localModelFile, setLocalModelFile] = useState<File | null>(null)
   const fetched = useMemo(
     () => EMAILS.filter((e) => e.date >= range.start && e.date <= range.end),
     [range],
@@ -352,6 +406,31 @@ export default function App() {
     visible.length > 0 && visible.every((e) => selected.includes(e.id))
   const actionItems = analyzed.filter((email) => email.action)
   const uniqueSenders = new Set(analyzed.map((email) => email.address)).size
+  const selectedProvider = AI_PROVIDERS.find(
+    (provider) => provider.id === aiProvider,
+  )!
+  function selectProvider(provider: AIProvider) {
+    setAiProvider(provider)
+    setModelName(DEFAULT_MODELS[provider])
+  }
+  function saveAISettings() {
+    if (aiProvider === "local" && !localModelFile && !localModelPath.trim()) {
+      notify("Choose a local model file or enter its path.")
+      return
+    }
+    if (aiProvider !== "local" && !apiKey.trim()) {
+      notify(`Enter your ${selectedProvider.label} API key.`)
+      return
+    }
+    if (aiProvider !== "local" && !modelName.trim()) {
+      notify("Enter a model ID before saving.")
+      return
+    }
+    setModal(null)
+    notify(
+      `${selectedProvider.label} selected. This demo saves the configuration locally but does not call the provider yet.`,
+    )
+  }
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -1216,14 +1295,14 @@ export default function App() {
           }}
         >
           <section
-            className="modal"
+            className={`modal ${modal === "settings" ? "settings-modal" : ""}`}
             role="dialog"
             aria-modal="true"
             aria-label={
               activeEmail
                 ? activeEmail.subject
                 : modal === "settings"
-                  ? "Account settings"
+                  ? "AI provider settings"
                   : "Getting started"
             }
             onClick={(e) => e.stopPropagation()}
@@ -1272,36 +1351,192 @@ export default function App() {
                 </div>
               </>
             ) : modal === "settings" ? (
-              <>
-                <span className="surface-icon">
-                  <GmailMark />
-                </span>
-                <h2>Connect your Gmail</h2>
-                <p className="modal-description">
-                  Your workspace is currently using sample emails. A live Gmail
-                  connection requires Google OAuth and a secure backend.
-                </p>
-                <div className="integration-status">
-                  <span className="tiny-dot" />
-                  Demo mode · No Google account connected
+              <div className="settings-panel">
+                <div className="settings-heading">
+                  <span className="ai-icon">
+                    <Icon name="sparkles" size={20} />
+                  </span>
+                  <div>
+                    <span className="settings-kicker">AI SETTINGS</span>
+                    <h2>Choose how your copilot thinks.</h2>
+                    <p>
+                      Switch between an on-device model or your preferred API
+                      provider.
+                    </p>
+                  </div>
                 </div>
-                <h3>Designed with your privacy in mind</h3>
-                <p className="modal-description">
-                  Emails will only be shared with an AI service when you
-                  explicitly choose to analyze them. This demo does not fetch
-                  real emails or transmit any content.
-                </p>
-                <button
-                  className="button primary full-width"
-                  onClick={() => {
-                    setModal(null)
-                    notify("You can explore all features using the demo inbox.")
-                  }}
-                >
-                  Continue with demo inbox
-                  <Icon name="arrow" size={16} />
-                </button>
-              </>
+
+                <div className="settings-section-heading">
+                  <div>
+                    <h3>AI provider</h3>
+                    <p>Select the engine used when you analyze an email.</p>
+                  </div>
+                  <span className="settings-status">
+                    <span className="tiny-dot" />
+                    {selectedProvider.label}
+                  </span>
+                </div>
+
+                <div className="provider-grid">
+                  {AI_PROVIDERS.map((provider) => (
+                    <button
+                      className={`provider-option ${
+                        aiProvider === provider.id ? "selected" : ""
+                      }`}
+                      key={provider.id}
+                      onClick={() => selectProvider(provider.id)}
+                      aria-pressed={aiProvider === provider.id}
+                    >
+                      <span className="provider-icon">
+                        <Icon name={provider.icon} size={17} />
+                      </span>
+                      <span>
+                        <strong>{provider.label}</strong>
+                        <small>{provider.description}</small>
+                      </span>
+                      <span className="provider-radio">
+                        {aiProvider === provider.id && <span />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="provider-config">
+                  <div className="provider-config-heading">
+                    <span className="provider-icon large">
+                      <Icon name={selectedProvider.icon} size={19} />
+                    </span>
+                    <div>
+                      <h3>{selectedProvider.label} configuration</h3>
+                      <p>
+                        {aiProvider === "local"
+                          ? "Point the app to the model you want to run locally."
+                          : "Add the credentials and model ID for this provider."}
+                      </p>
+                    </div>
+                  </div>
+
+                  {aiProvider === "local" ? (
+                    <div className="local-model-fields">
+                      <label className="settings-field">
+                        <span>Local model path</span>
+                        <input
+                          value={localModelPath}
+                          onChange={(event) =>
+                            setLocalModelPath(event.target.value)
+                          }
+                          placeholder="/models/llama-3.2-3b-instruct.gguf"
+                        />
+                        <small>
+                          Enter the path used by your local runtime, or choose a
+                          file below.
+                        </small>
+                      </label>
+                      <div className="model-file-picker">
+                        <input
+                          id="local-model-file"
+                          type="file"
+                          accept=".gguf,.bin,.safetensors"
+                          onChange={(event) =>
+                            setLocalModelFile(event.target.files?.[0] ?? null)
+                          }
+                        />
+                        <label htmlFor="local-model-file">
+                          <span className="provider-icon">
+                            <Icon name="file" size={17} />
+                          </span>
+                          <span>
+                            <strong>
+                              {localModelFile
+                                ? localModelFile.name
+                                : "Choose a local model file"}
+                            </strong>
+                            <small>
+                              {localModelFile
+                                ? `${(localModelFile.size / 1024 / 1024).toFixed(1)} MB selected`
+                                : "GGUF, BIN, or SafeTensors"}
+                            </small>
+                          </span>
+                          <span className="file-picker-action">
+                            {localModelFile ? "Change" : "Browse"}
+                          </span>
+                        </label>
+                      </div>
+                      <div className="settings-note">
+                        <Icon name="shield" size={15} />
+                        <p>
+                          Browsers cannot start a local model runtime by
+                          themselves. The selected file is kept in this session
+                          and will need a local inference backend to run.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="api-provider-fields">
+                      <label className="settings-field">
+                        <span>Model ID</span>
+                        <input
+                          value={modelName}
+                          onChange={(event) => setModelName(event.target.value)}
+                          placeholder="Enter a provider model ID"
+                        />
+                      </label>
+                      <label className="settings-field">
+                        <span>API key</span>
+                        <input
+                          type="password"
+                          value={apiKey}
+                          onChange={(event) => setApiKey(event.target.value)}
+                          placeholder={
+                            aiProvider.startsWith("openrouter")
+                              ? "sk-or-v1-••••••••••••"
+                              : "Enter your private API key"
+                          }
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                        <small>
+                          {aiProvider === "openrouter-free"
+                            ? "The free route still requires an OpenRouter API key."
+                            : "Kept only in memory for this demo session."}
+                        </small>
+                      </label>
+                      <div className="settings-note">
+                        <Icon name="shield" size={15} />
+                        <p>
+                          API keys are not sent anywhere in this demo. A secure
+                          backend proxy is required before enabling live model
+                          requests.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="gmail-settings-row">
+                  <span className="gmail-settings-icon">
+                    <GmailMark />
+                  </span>
+                  <div>
+                    <strong>Gmail connection</strong>
+                    <p>Demo inbox · Google OAuth is not connected</p>
+                  </div>
+                  <span className="settings-demo-badge">DEMO</span>
+                </div>
+
+                <div className="settings-actions">
+                  <button
+                    className="button secondary"
+                    onClick={() => setModal(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button className="button primary" onClick={saveAISettings}>
+                    Save AI settings
+                    <Icon name="arrow" size={15} />
+                  </button>
+                </div>
+              </div>
             ) : (
               <>
                 <span className="ai-icon">
