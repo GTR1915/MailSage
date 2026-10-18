@@ -399,6 +399,35 @@ const EMAILS: Email[] = [
     unread: false,
   },
 ]
+const DEMO_FOLLOW_UPS: Email[] = [
+  [
+    ["Priya Shah", "priya@acme.studio", "Q3 roadmap — analytics priorities", "Sharing the analytics priorities we discussed for the Q3 roadmap.", "What should make the first cut?"],
+    ["James Wilson", "james@acme.studio", "Re: Q3 roadmap — analytics priorities", "Following up on the analytics priorities for Q3. I recommend we start with retention and onboarding.", "Can we align before Thursday's planning session?"],
+    ["Priya Shah", "priya@acme.studio", "Re: Q3 roadmap — decision needed", "A quick follow-up on the Q3 roadmap decision. The team is ready to scope the analytics work.", "Please confirm the priority order."],
+  ],
+  [
+    ["Olivia Rhye", "olivia@acme.studio", "Website redesign — first review", "The first pass of the website redesign is ready for your review.", "I would love feedback on the homepage direction."],
+    ["Olivia Rhye", "olivia@acme.studio", "Re: Website redesign — feedback", "Following up on the website redesign feedback and next steps.", "Should we move the approved direction into handoff?"],
+    ["Marcus Lee", "marcus@acme.studio", "Website redesign handoff", "The design handoff is ready with the latest homepage and product page files.", "I have included the open questions from the review."],
+  ],
+  [
+    ["Sarah Chen", "sarah@acme.studio", "June invoice & project summary", "Attached is the June invoice and a recap of the completed project work.", "Payment is requested by June 25."],
+    ["Sarah Chen", "sarah@acme.studio", "Re: June invoice & project summary", "Checking in on the June invoice and whether you need any additional details.", "Happy to resend the attachment."],
+    ["Finance team", "finance@acme.studio", "Payment reminder — June project", "A friendly reminder about the June project invoice.", "Please share the expected payment date."],
+  ],
+  [
+    ["Michael Foster", "michael@acme.studio", "Customer interview notes", "The customer interviews point to faster onboarding, clearer analytics, and better exports.", "These themes should shape product planning."],
+    ["Michael Foster", "michael@acme.studio", "Re: Customer interview notes", "A follow-up with the strongest patterns from the customer interviews.", "Let us include these in the next planning session."],
+    ["Nina Park", "nina@acme.studio", "Customer research synthesis", "The research synthesis confirms onboarding remains the clearest opportunity.", "I added the evidence and recommended experiments."],
+  ],
+] as const
+
+const DEMO_EMAILS: Email[] = [...EMAILS, ...DEMO_FOLLOW_UPS.flatMap((group, groupIndex) => group.map((item, itemIndex) => {
+  const [sender, address, subject, preview, body] = item
+  const initials = sender.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()
+  return { id: `demo-${groupIndex}-${itemIndex}`, sender, address, initials, color: avatarColors[(groupIndex + itemIndex) % avatarColors.length], subject, preview, body: `${body}\n\nThanks,\n${sender}`, category: "Work", date: `2025-06-${String(10 + groupIndex * 2 + itemIndex).padStart(2, "0")}`, time: `Jun ${10 + groupIndex * 2 + itemIndex}`, unread: itemIndex !== 2 }
+}))]
+
 const categories = ["All emails", "Work", "Updates", "Promotions", "Finance"]
 const dateLabel = (date: string) =>
   new Date(date).toLocaleString("en-US", {
@@ -416,7 +445,9 @@ export default function App() {
   const [start, setStart] = useState(() => toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
   const [end, setEnd] = useState(() => toLocalInputValue(new Date()))
   const [range, setRange] = useState(() => ({ start: toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)), end: toLocalInputValue(new Date()) }))
-  const [emails, setEmails] = useState<Email[]>([])
+  const [emails, setEmails] = useState<Email[]>(DEMO_EMAILS)
+  const [relatedPrompt, setRelatedPrompt] = useState<{ source: Email; matches: { email: Email; reasons: string[] }[] } | null>(null)
+  const [relatedSelection, setRelatedSelection] = useState<(string | number)[]>([])
   const [fetching, setFetching] = useState(false)
   const [fetchProgress, setFetchProgress] = useState({ completed: 0, total: 0, phase: "" })
   const [selected, setSelected] = useState<(string | number)[]>([])
@@ -727,10 +758,30 @@ export default function App() {
       await new Promise((resolve) => window.setTimeout(resolve, 350))
     }
   }
-  async function analyze(emailsToAnalyze: Email[]) {
+  function findRelated(source: Email) {
+    const keywords = source.subject.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 4)
+    return fetched.filter((candidate) => candidate.id !== source.id).map((email) => {
+      const reasons = [
+        keywords.some((keyword) => `${email.subject} ${email.preview}`.toLowerCase().includes(keyword)) ? "Semantically similar" : "",
+        email.subject.toLowerCase().includes("re:") && email.sender === source.sender ? "Same thread" : "",
+        email.sender === source.sender ? "Same sender" : "",
+      ].filter(Boolean)
+      return { email, reasons }
+    }).filter((match) => match.reasons.length).sort((a, b) => b.reasons.length - a.reasons.length).slice(0, 4)
+  }
+
+  async function analyze(emailsToAnalyze: Email[], skipRelationCheck = false) {
     if (!emailsToAnalyze.length) {
       notify("Select at least one email to analyze.")
       return
+    }
+    if (!skipRelationCheck && emailsToAnalyze.length === 1) {
+      const matches = findRelated(emailsToAnalyze[0])
+      if (matches.length) {
+        setRelatedSelection(matches.map((match) => match.email.id))
+        setRelatedPrompt({ source: emailsToAnalyze[0], matches })
+        return
+      }
     }
     setAnalyzing(true)
     setStreamedSummary("")
@@ -1427,6 +1478,28 @@ export default function App() {
           >
             <Icon name="close" size={16} />
           </button>
+        </div>
+      )}
+      {relatedPrompt && (
+        <div className="modal-backdrop" onClick={() => setRelatedPrompt(null)}>
+          <section className="modal related-modal" role="dialog" aria-modal="true" aria-labelledby="related-title" onClick={(event) => event.stopPropagation()}>
+            <button className="modal-close icon-button" aria-label="Close related email dialog" onClick={() => setRelatedPrompt(null)}><Icon name="close" /></button>
+            <span className="ai-icon"><Icon name="sparkles" /></span>
+            <span className="settings-kicker">CONTEXT CHECK</span>
+            <h2 id="related-title">A little more context?</h2>
+            <p className="related-intro">I&apos;ve identified {relatedPrompt.matches.length} potentially relevant emails that could provide additional context for your summary.</p>
+            <div className="algorithm-legend"><span className="legend-semantic">Semantic similarity</span><span className="legend-thread">Same thread</span><span className="legend-sender">Same sender</span></div>
+            <div className="related-list">
+              {relatedPrompt.matches.map(({ email, reasons }) => (
+                <label className="related-row" key={email.id}>
+                  <span className={`relation-marker ${reasons[0].toLowerCase().replaceAll(" ", "-")}`} />
+                  <input type="checkbox" checked={relatedSelection.includes(email.id)} onChange={() => setRelatedSelection((current) => current.includes(email.id) ? current.filter((id) => id !== email.id) : [...current, email.id])} />
+                  <span className="related-copy"><strong>{email.sender}</strong><span>{email.subject}</span><small>{reasons.join(" · ")}</small></span>
+                </label>
+              ))}
+            </div>
+            <div className="related-actions"><button className="button secondary" onClick={() => setRelatedPrompt(null)}>Continue with this email</button><button className="button primary" onClick={() => { const selectedRelated = fetched.filter((email) => relatedSelection.includes(email.id)); setRelatedPrompt(null); void analyze([relatedPrompt.source, ...selectedRelated], true) }}>Include selected emails <Icon name="arrow" size={15} /></button></div>
+          </section>
         </div>
       )}
       {(activeEmail || modal) && (

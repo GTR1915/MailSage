@@ -245,6 +245,29 @@ h1 { font-family: 'Manrope', sans-serif; font-size: 34px; line-height: 1.35; fon
 .empty-state h3 { font-size: 14px; font-weight: 500; color: #9a7faa; }
 .empty-state p { font-size: 11px; color: #bba8c6; margin-top: 8px; }
 .full-width { width: 100%; }
+.related-modal { width: min(94vw, 620px); }
+.related-modal > .settings-kicker { display: block; margin-top: 18px; color: #9f85be; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; }
+.related-modal h2 { margin: 8px 0 10px; }
+.related-intro { color: #80738b; font-size: 12px; line-height: 1.7; max-width: 510px; }
+.algorithm-legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 21px 0 12px; }
+.algorithm-legend span, .related-row small { border-radius: 999px; font-size: 9px; font-weight: 600; padding: 5px 8px; }
+.legend-semantic { color: #7254c8; background: #eee8ff; }
+.legend-thread { color: #b17534; background: #fff2df; }
+.legend-sender { color: #3a8290; background: #e6f5f5; }
+.related-list { display: flex; flex-direction: column; gap: 8px; }
+.related-row { display: flex; align-items: center; gap: 11px; padding: 12px; border: 1px solid #eee8f4; border-radius: 11px; background: #fcfbfe; cursor: pointer; }
+.related-row:hover { border-color: #d9c9ec; background: #faf7ff; }
+.relation-marker { width: 4px; align-self: stretch; border-radius: 99px; }
+.relation-marker.semantic-similarity { background: #8060db; }
+.relation-marker.same-thread { background: #d8944f; }
+.relation-marker.same-sender { background: #57a4af; }
+.related-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 3px; }
+.related-copy strong { color: #574b63; font-size: 11px; }
+.related-copy span { overflow: hidden; color: #756783; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.related-copy small { align-self: flex-start; padding: 0; color: #9b8da5; font-size: 9px; font-weight: 500; }
+.related-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 22px; }
+.related-actions .button { min-height: 38px; }
+@media (max-width: 560px) { .related-actions { flex-direction: column-reverse; } .related-actions .button { width: 100%; } }
 
 .toast { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 30px); padding: 14px 18px; background: var(--surface); border: 1px solid #e1d7ed; border-radius: 12px; box-shadow: 0 10px 35px #4929511c; z-index: 100; color: #a079b5; font-size: 12px; }
 .toast span { max-width: 500px; }
