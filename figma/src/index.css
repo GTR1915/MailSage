@@ -34,7 +34,7 @@ input::placeholder { color: #a0a0b0; }
 .rotate-down { transform: rotate(90deg); }
 
 .app-shell { display: flex; min-height: 100vh; }
-.sidebar { width: 232px; height: 100vh; flex-shrink: 0; overflow: hidden; background: var(--sidebar); display: flex; flex-direction: column; padding: 24px 16px 0; position: fixed; inset: 0 auto 0 0; z-index: 20; color: #f7f7ff; }
+.sidebar { width: 232px; height: 100vh; min-height: 100dvh; flex-shrink: 0; overflow: hidden; background: var(--sidebar); display: flex; flex-direction: column; padding: 24px 16px 0; position: fixed; top: 0; left: 0; bottom: 0; z-index: 20; color: #f7f7ff; }
 .brand { display: flex; align-items: center; gap: 10px; padding-left: 11px; font-family: 'Manrope', sans-serif; font-size: 27px; font-weight: 800; letter-spacing: -1.3px; }
 .brand-mark { display: grid; place-items: center; width: 36px; height: 36px; background: linear-gradient(135deg, #a091ff, #715be1); border: 1px solid #a898ff66; color: #fff; border-radius: 11px; box-shadow: 0 4px 20px #8f70ff25; }
 .brand-dot { color: #a99aff; margin-left: -8px; }
@@ -669,8 +669,8 @@ h1 { color: #fff; font-size: 34px; text-shadow: 0 0 24px #b85cff55; }
 :root { --iridescent: linear-gradient(110deg, #a94dff 0%, #ff72cf 28%, #72dfff 55%, #ffe29b 78%, #a855f7 100%); }
 body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-events: none; opacity: .42; background: conic-gradient(from 210deg at 48% 44%, transparent 0 18%, #b937ff20 25%, transparent 33%, #00e5ff18 45%, transparent 55%, #ffdb8a14 68%, transparent 77%); filter: blur(35px); animation: cosmic-drift 18s ease-in-out infinite alternate; }
 .app-shell::before { z-index: 0; opacity: .7; background: radial-gradient(ellipse at 36% 8%, #c148ff36, transparent 23%), radial-gradient(ellipse at 73% 22%, #20d9ef20, transparent 20%), linear-gradient(108deg, transparent 28%, #c347ff25 44%, #1de5df18 52%, transparent 67%); filter: blur(3px); animation: light-sweep 12s ease-in-out infinite alternate; }
-.sidebar, .topbar, main { position: relative; z-index: 1; }
-.sidebar { box-shadow: 7px 0 28px #7131ff66, inset -1px 0 #ad6dff66; }
+.topbar, main { position: relative; z-index: 1; }
+.sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 20; box-shadow: 7px 0 28px #7131ff66, inset -1px 0 #ad6dff66; }
 .sidebar::after, .connection-card::after, .fetch-card::after, .inbox-card::after, .stat-card::before, .ai-panel::after { content: ''; position: absolute; pointer-events: none; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #d9a0ff, 0 0 30px 8px #8c5bff; animation: twinkle 3.6s ease-in-out infinite; }
 .sidebar::after { right: 16px; top: 117px; }.connection-card::after { right: 3px; top: -3px; }.fetch-card::after { right: 29%; top: -3px; animation-delay: 1.3s; }.inbox-card::after { left: 40%; top: -3px; animation-delay: .6s; }.stat-card::before { right: 22px; top: 18px; z-index: 2; animation-delay: 1.8s; }.ai-panel::after { right: 22px; top: 33px; animation-delay: 2.4s; }
 .button { position: relative; overflow: hidden; isolation: isolate; border-width: 1px; }
