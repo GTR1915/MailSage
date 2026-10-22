@@ -715,3 +715,121 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 @keyframes orb-float { 0%, 100% { transform: rotate(-10deg) translateY(0); } 50% { transform: rotate(-6deg) translateY(-8px); } }
 @keyframes orb-glow { from { filter: brightness(1); } to { filter: brightness(1.28); } }
 @media (prefers-reduced-motion: reduce) { body::after, .app-shell::before, .button::before, .fetch-card::before, .inbox-card::before, .stat-card::after, .ai-panel::before, .orb, .button.primary { animation: none; } }
+
+/* AI settings: vivid frosted glass treatment */
+.settings-modal {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+  border: 1px solid transparent;
+  border-radius: 22px;
+  background: linear-gradient(#110d2a, #110d2a) padding-box, var(--iridescent) border-box;
+  box-shadow: 0 0 0 1px #ffffff2e, 0 0 24px #d056ffcc, 0 0 64px #713dff99, 0 0 110px #15d9ff55;
+  animation: dialog-breathe 6s ease-in-out infinite alternate;
+}
+.settings-modal::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  z-index: -2;
+  border-radius: 24px;
+  background: conic-gradient(from 0deg, #ff61df, #8d6bff, #38e9ff, #ffe18c, #ff61df);
+  filter: blur(12px);
+  opacity: .85;
+  animation: perimeter-spin 8s linear infinite;
+}
+.settings-modal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 21px;
+  pointer-events: none;
+  background: radial-gradient(circle at 10% 18%, #ffb1fa24 0 2px, transparent 3px), radial-gradient(circle at 90% 88%, #fff1bc2b 0 2px, transparent 3px), linear-gradient(120deg, transparent 20%, #9deaff12 45%, #ff8df01b 60%, transparent 78%);
+  background-size: 180px 160px, 220px 190px, 100% 100%;
+  animation: glass-reflection 9s ease-in-out infinite;
+}
+.settings-modal .settings-panel {
+  overflow: hidden;
+  border-radius: 21px;
+  background: linear-gradient(145deg, #241b47d9, #100d26e8 55%, #1a1239e6);
+  backdrop-filter: blur(28px) saturate(150%);
+}
+.settings-modal .settings-heading {
+  position: relative;
+  background: linear-gradient(120deg, #3c2a68aa, #17132f88 48%, #30204eaa);
+  border-bottom-color: #ead8ff35;
+  box-shadow: inset 0 1px #ffffff3d;
+}
+.settings-modal .settings-heading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(112deg, transparent 30%, #ffffff1d 46%, transparent 58%);
+  transform: translateX(-120%);
+  animation: glass-sweep 7s ease-in-out infinite;
+}
+.settings-modal .settings-heading > .ai-icon,
+.settings-modal .provider-icon,
+.settings-modal .gmail-settings-icon {
+  color: #ffe8a7;
+  background: linear-gradient(145deg, #ffd97855, #a95bff55 60%, #46dfff44);
+  border-color: #ffe5a999;
+  box-shadow: 0 0 15px #d86dff88, inset 0 1px #fff8;
+}
+.settings-modal .settings-heading h2,
+.settings-modal .settings-section-heading h3,
+.settings-modal .provider-config-heading h3 { color: #fff4ff; text-shadow: 0 0 15px #d993ff88; }
+.settings-modal .settings-heading p,
+.settings-modal .settings-section-heading p,
+.settings-modal .provider-config-heading p { color: #d8cbed; }
+.settings-modal .settings-status { color: #ffeeb5; background: #ffffff12; border-color: #e8b8ff77; box-shadow: 0 0 12px #b64cff44; }
+.settings-modal .provider-grid { background: transparent; }
+.settings-modal .provider-option {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff13, #5e4d8d26 55%, #162e5b38);
+  border-color: #dfc5ff52;
+  box-shadow: inset 0 1px #ffffff25, 0 0 10px #7c54bd22;
+  backdrop-filter: blur(10px);
+}
+.settings-modal .provider-option::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, #fff4 46%, transparent 63%);
+  transform: translateX(-130%);
+  animation: glass-sweep 8s ease-in-out infinite;
+}
+.settings-modal .provider-option:hover,
+.settings-modal .provider-option.selected {
+  background: linear-gradient(120deg, #70477c66, #6641a866 48%, #168db052);
+  border-color: #f5a7ff;
+  box-shadow: 0 0 12px #ff63e8aa, 0 0 27px #7470ff66, inset 0 1px #fff8;
+}
+.settings-modal .provider-option.selected { animation: selected-pulse 2.8s ease-in-out infinite; }
+.settings-modal .provider-option strong { color: #fff7ff; }
+.settings-modal .provider-option small { color: #d9c9ed; }
+.settings-modal .provider-radio { border-color: #d9c4ff99; box-shadow: 0 0 8px #c883ff55; }
+.settings-modal .provider-radio span { background: #fff3b0; box-shadow: 0 0 9px #ff7dff, 0 0 16px #67eaff; }
+.settings-modal .provider-config,
+.settings-modal .gmail-settings-row {
+  background: linear-gradient(135deg, #ffffff12, #4d3b7930 50%, #102c5130);
+  border-color: #e1c6ff55;
+  box-shadow: inset 0 1px #ffffff25, 0 0 17px #7243b933;
+  backdrop-filter: blur(14px);
+}
+.settings-modal .settings-field > span { color: #eee2ff; }
+.settings-modal .settings-field input { color: #fff; background: #0e0b2499; border-color: #c9a9ec66; box-shadow: inset 0 1px #fff2; }
+.settings-modal .settings-field input:focus { border-color: #ff9cf4; box-shadow: 0 0 14px #c95cff77, inset 0 1px #fff4; }
+.settings-modal .settings-actions { border-top-color: #ffffff24; background: #0d0a22aa; }
+.settings-modal .settings-actions .button.secondary { color: #211532; }
+.settings-modal .settings-actions .button.primary { box-shadow: 0 0 16px #ff61e9cc, 0 0 32px #765cff66, inset 0 1px #fff; }
+@keyframes perimeter-spin { to { transform: rotate(360deg); } }
+@keyframes dialog-breathe { from { box-shadow: 0 0 0 1px #ffffff2e, 0 0 24px #d056ff99, 0 0 64px #713dff66, 0 0 110px #15d9ff33; } to { box-shadow: 0 0 0 1px #ffffff4d, 0 0 34px #ff64e9dd, 0 0 82px #594dff99, 0 0 130px #15d9ff66; } }
+@keyframes glass-sweep { 0%, 22% { transform: translateX(-130%); } 62%, 100% { transform: translateX(130%); } }
+@keyframes glass-reflection { 0%, 100% { background-position: 0 0, 0 0, -20% 0; } 50% { background-position: 24px 20px, -30px 18px, 120% 0; } }
+@keyframes selected-pulse { 50% { box-shadow: 0 0 18px #ff63e8cc, 0 0 38px #7470ff88, inset 0 1px #fff9; } }
+@media (prefers-reduced-motion: reduce) { .settings-modal, .settings-modal::before, .settings-modal::after, .settings-modal .provider-option::after { animation: none; } }
