@@ -530,7 +530,22 @@ h1 { color: #fbf8ff; text-shadow: 0 0 24px #bd75ff24; }
 .button.primary { background: linear-gradient(135deg, #ab5ce7, #6d43c7); border-color: #d493ff99; box-shadow: 0 0 20px #a34dff42, inset 0 1px 0 #ffffff44; }
 .button.primary:hover { background: linear-gradient(135deg, #c777ff, #8057e5); }
 .button.secondary { color: #eee7ff; background: linear-gradient(135deg, #292040, #17142b); border-color: #a97dd466; box-shadow: 0 0 16px #7b49b522, inset 0 1px 0 #ffffff16; }
-.button.secondary:hover { background: #3b2759; border-color: #d093ff; }
+.button.secondary:hover,
+.button.secondary:focus-visible { color: #ffffff; background: linear-gradient(135deg, #68408f 0%, #40266a 52%, #253b70 100%); border-color: #f0b8ff; box-shadow: 0 0 22px #b35dff66, inset 0 1px 0 #ffffff55; text-shadow: 0 1px 10px #120a24; }
+.button.secondary:hover svg,
+.button.secondary:focus-visible svg { color: #ffffff; }
+.refresh-button:hover,
+.refresh-button:focus-visible,
+.connect-button:hover,
+.connect-button:focus-visible { color: #ffffff !important; }
+.refresh-button:hover,
+.refresh-button:hover span,
+.date-controls .refresh-button:hover,
+.date-controls .refresh-button:hover span,
+.date-controls .button:not(.primary):hover,
+.date-controls .button:not(.primary):hover span { color: #ffffff !important; }
+.page-heading .connect-button:hover,
+.page-heading .connect-button:hover span { color: #241832 !important; }
 .fetch-card, .inbox-card, .stat-card { background: linear-gradient(135deg, #17142d, #100f25); border-color: #ffffff20; box-shadow: 0 12px 34px #0000002e, inset 0 1px 0 #ffffff10; }
 .fetch-card { background: linear-gradient(105deg, #17132c 0%, #20183b 52%, #12142d 100%); }
 .surface-icon { background: #291a48; border-color: #9457c955; color: #d18aff; }
