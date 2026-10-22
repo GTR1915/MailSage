@@ -700,3 +700,7 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 @keyframes orb-float { 0%, 100% { transform: rotate(-10deg) translateY(0); } 50% { transform: rotate(-6deg) translateY(-8px); } }
 @keyframes orb-glow { from { filter: brightness(1); } to { filter: brightness(1.28); } }
 @media (prefers-reduced-motion: reduce) { body::after, .app-shell::before, .button::before, .fetch-card::before, .inbox-card::before, .stat-card::after, .ai-panel::before, .orb, .button.primary { animation: none; } }
+
+/* Keep the dashboard cards soft and the refresh action readable in every state. */
+.stat-card { border-image: none; border-radius: 18px; }
+.refresh-button:hover:not(:disabled), .refresh-button:focus-visible { color: #201532; background: linear-gradient(115deg, #fff4ff, #d8ceff 44%, #bff7ff 76%, #fff0c7); border-color: #f4d7ff; box-shadow: 0 0 20px #c79effaa, 0 0 34px #82eaff44, inset 0 1px #fff; }
