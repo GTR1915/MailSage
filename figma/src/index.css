@@ -603,7 +603,19 @@ h1 { color: #fbf8ff; text-shadow: 0 0 24px #bd75ff24; }
 .legend-thread { color: #ffd29c; background: #b66c2434; }
 .legend-sender { color: #9ce6ec; background: #267c8734; }
 
-.settings-modal { max-width: 780px; padding: 0; }
+.settings-modal { max-width: 780px; padding: 0; isolation: isolate; overflow: visible; background: linear-gradient(145deg, #18142d 0%, #100d20 58%, #17112a 100%); border: 0; box-shadow: 0 25px 100px #00000099, 0 0 42px #7c35bf38; }
+  .settings-modal::before { content: ''; position: absolute; inset: -2px; z-index: -1; border-radius: 21px; padding: 2px; background: conic-gradient(from 0deg, #ff64df, #9a5cff 18%, #55d9ff 38%, #fff0a5 53%, #ff72dc 70%, #7d66ff 86%, #ff64df); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: settings-border-travel 7s linear infinite; filter: drop-shadow(0 0 6px #ff5de6) drop-shadow(0 0 16px #7864ff); pointer-events: none; }
+  .settings-modal::after { content: ''; position: absolute; inset: -18px; z-index: -2; border-radius: 34px; background: radial-gradient(ellipse at 18% 12%, #d855ff28, transparent 34%), radial-gradient(ellipse at 86% 24%, #3bcfff20, transparent 38%), radial-gradient(ellipse at 50% 100%, #ff70cf1c, transparent 45%); filter: blur(18px); pointer-events: none; }
+  @keyframes settings-border-travel { to { transform: rotate(360deg); } }
+  .settings-modal .settings-heading, .settings-modal .provider-config { background: linear-gradient(145deg, #2a2045cc, #15122bd9); border-color: #ffffff20; }
+  .settings-modal .provider-grid { background: transparent; }
+  .settings-modal .provider-option { background: linear-gradient(145deg, #352856b8, #18152fb8); border-color: #ffffff2b; box-shadow: inset 0 1px #ffffff12, 0 8px 20px #05030d36; }
+  .settings-modal .provider-option:hover { background: linear-gradient(145deg, #5c3d78cc, #21163ec7); border-color: #db8cffb8; box-shadow: 0 0 20px #b85cff3d, inset 0 1px #ffffff2b; }
+  .settings-modal .provider-option.selected { background: linear-gradient(145deg, #6a4878d9, #281849d9); border-color: #f2b3ff; box-shadow: 0 0 7px #ffb7f0, 0 0 24px #bd5eff70, inset 0 1px #fff4ff66; }
+  .settings-modal .provider-option.selected::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(115deg, transparent 25%, #ffffff18 45%, transparent 63%); background-size: 220% 100%; animation: settings-sheen 3.8s ease-in-out infinite; pointer-events: none; }
+  .settings-modal .provider-option { position: relative; overflow: hidden; }
+  @keyframes settings-sheen { 0%, 35% { background-position: 140% 0; } 70%, 100% { background-position: -40% 0; } }
+  .settings-modal .settings-heading { box-shadow: inset 0 1px #ffffff20; }
 .settings-modal .modal-close { top: 20px; right: 21px; z-index: 2; }
 .settings-heading { display: flex; align-items: flex-start; gap: 15px; padding: 28px 66px 25px 29px; border-bottom: 1px solid #eee9f2; background: linear-gradient(145deg, #fcfaff, #f8f4fb); border-radius: 19px 19px 0 0; }
 .settings-heading > .ai-icon, .provider-icon, .gmail-settings-icon { display: grid; place-items: center; flex-shrink: 0; border: 1px solid #eadff1; border-radius: 9px; background: #f7f1fb; color: #a17bb9; }
@@ -732,22 +744,30 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
   position: absolute;
   inset: -3px;
   z-index: -2;
+  padding: 2px;
   border-radius: 24px;
-  background: conic-gradient(from 0deg, #ff61df, #8d6bff, #38e9ff, #ffe18c, #ff61df);
-  filter: blur(12px);
-  opacity: .85;
-  animation: perimeter-spin 8s linear infinite;
+  background: conic-gradient(from 0deg, #ff61df, #8d6bff 18%, #38e9ff 39%, #ffe18c 54%, #ff61df 72%, #8d6bff 88%, #ff61df);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: drop-shadow(0 0 5px #ff61df) drop-shadow(0 0 14px #6b6cff);
+  animation: perimeter-trail 7s linear infinite;
+  pointer-events: none;
 }
 .settings-modal::after {
   content: '';
   position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: 21px;
+  inset: -20px;
+  z-index: -3;
+  border-radius: 40px;
   pointer-events: none;
-  background: radial-gradient(circle at 10% 18%, #ffb1fa24 0 2px, transparent 3px), radial-gradient(circle at 90% 88%, #fff1bc2b 0 2px, transparent 3px), linear-gradient(120deg, transparent 20%, #9deaff12 45%, #ff8df01b 60%, transparent 78%);
-  background-size: 180px 160px, 220px 190px, 100% 100%;
-  animation: glass-reflection 9s ease-in-out infinite;
+  background: radial-gradient(ellipse at 15% 15%, #d855ff28, transparent 30%), radial-gradient(ellipse at 86% 18%, #38dfff1f, transparent 34%), radial-gradient(ellipse at 50% 100%, #ff72d51c, transparent 42%);
+  filter: blur(18px);
+}
+@keyframes perimeter-trail {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 .settings-modal .settings-panel {
   overflow: hidden;
