@@ -1577,6 +1577,24 @@ export default function App() {
               </>
             ) : modal === "settings" ? (
               <div className="settings-panel">
+                <svg className="settings-perimeter-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="settings-rainbow-trail" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ff5ee7" />
+                      <stop offset="18%" stopColor="#ff2fcf" />
+                      <stop offset="38%" stopColor="#845bff" />
+                      <stop offset="57%" stopColor="#39d9ff" />
+                      <stop offset="76%" stopColor="#fff2a6" />
+                      <stop offset="90%" stopColor="#ff82df" />
+                      <stop offset="100%" stopColor="#ff5ee7" />
+                    </linearGradient>
+                  </defs>
+                  <rect className="settings-trail-glow" x="2" y="2" width="96" height="96" rx="4" pathLength="1000" />
+                  <rect className="settings-trail-stroke" x="2" y="2" width="96" height="96" rx="4" pathLength="1000" />
+                </svg>
+                <span className="settings-star-flare settings-star-flare-one" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-two" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-three" aria-hidden="true" />
                 <div className="settings-heading">
                   <span className="ai-icon"><Icon name="sparkles" size={20} /></span>
                   <div><span className="settings-kicker">AI SETTINGS</span><h2>Choose how your copilot thinks.</h2><p>Switch between an on-device model and your preferred API provider.</p></div>
