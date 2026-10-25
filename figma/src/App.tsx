@@ -1577,7 +1577,29 @@ export default function App() {
               </>
             ) : modal === "settings" ? (
               <div className="settings-panel">
-
+                <svg className="settings-perimeter-trail" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="settings-rainbow-trail" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#ff62e8" />
+                      <stop offset="20%" stopColor="#c85cff" />
+                      <stop offset="42%" stopColor="#596dff" />
+                      <stop offset="61%" stopColor="#4de8ff" />
+                      <stop offset="78%" stopColor="#fff9df" />
+                      <stop offset="90%" stopColor="#ff8cde" />
+                      <stop offset="100%" stopColor="#ff62e8" />
+                    </linearGradient>
+                    <path id="settings-orbit-path" d="M 6 2 H 94 Q 98 2 98 6 V 94 Q 98 98 94 98 H 6 Q 2 98 2 94 V 6 Q 2 2 6 2 Z" pathLength="1000" />
+                  </defs>
+                  <use className="settings-trail settings-trail-a" href="#settings-orbit-path" />
+                  <use className="settings-trail settings-trail-b" href="#settings-orbit-path" />
+                  <use className="settings-trail settings-trail-c" href="#settings-orbit-path" />
+                  <circle className="settings-spark settings-spark-one" r=".7"><animateMotion dur="4.6s" repeatCount="indefinite" rotate="auto"><mpath href="#settings-orbit-path" /></animateMotion></circle>
+                  <circle className="settings-spark settings-spark-two" r=".45"><animateMotion dur="6.2s" begin="-2.4s" repeatCount="indefinite" rotate="auto"><mpath href="#settings-orbit-path" /></animateMotion></circle>
+                  <circle className="settings-spark settings-spark-three" r=".55"><animateMotion dur="7.8s" begin="-5s" repeatCount="indefinite" rotate="auto"><mpath href="#settings-orbit-path" /></animateMotion></circle>
+                </svg>
+                <span className="settings-star-flare settings-star-flare-one" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-two" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-three" aria-hidden="true" />
                 <div className="settings-heading">
                   <span className="ai-icon"><Icon name="sparkles" size={20} /></span>
                   <div><span className="settings-kicker">AI SETTINGS</span><h2>Choose how your copilot thinks.</h2><p>Switch between an on-device model and your preferred API provider.</p></div>
