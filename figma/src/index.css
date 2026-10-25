@@ -769,7 +769,7 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
   100% { background-position: 0% 50%; }
 }
 .settings-modal .settings-panel {
-  overflow: hidden;
+  overflow: visible;
   border-radius: 21px;
   background: linear-gradient(145deg, #241b47d9, #100d26e8 55%, #1a1239e6);
   backdrop-filter: blur(28px) saturate(150%);
@@ -862,3 +862,4 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 .settings-star-flare-one { left: -4px; top: -4px; }
 .settings-star-flare-two { right: -4px; top: -4px; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #ffe98b, 0 0 30px 10px #ff72dc; }
 .settings-star-flare-three { right: -4px; bottom: -4px; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #38dcff, 0 0 30px 10px #795cff; }
+.settings-star-flare-four { left: -4px; bottom: -4px; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #ff75e8, 0 0 30px 10px #8564ff; }
