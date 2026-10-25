@@ -852,3 +852,13 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 @keyframes glass-reflection { 0%, 100% { background-position: 0 0, 0 0, -20% 0; } 50% { background-position: 24px 20px, -30px 18px, 120% 0; } }
 @keyframes selected-pulse { 50% { box-shadow: 0 0 18px #ff63e8cc, 0 0 38px #7470ff88, inset 0 1px #fff9; } }
 @media (prefers-reduced-motion: reduce) { .settings-modal, .settings-modal::before, .settings-modal::after, .settings-modal .provider-option::after { animation: none; } }
+
+/* Static corner starbursts only; perimeter motion remains removed. */
+.settings-modal .settings-panel { position: relative; }
+.settings-star-flare { position: absolute; z-index: 6; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #ff75e8, 0 0 30px 10px #8564ff; pointer-events: none; }
+.settings-star-flare::before, .settings-star-flare::after { content: ''; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: linear-gradient(transparent, #fff, transparent); }
+.settings-star-flare::before { width: 2px; height: 38px; }
+.settings-star-flare::after { width: 38px; height: 2px; background: linear-gradient(90deg, transparent, #fff, transparent); }
+.settings-star-flare-one { left: -4px; top: -4px; }
+.settings-star-flare-two { right: -4px; top: -4px; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #ffe98b, 0 0 30px 10px #ff72dc; }
+.settings-star-flare-three { right: -4px; bottom: -4px; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #38dcff, 0 0 30px 10px #795cff; }
