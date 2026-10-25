@@ -606,28 +606,6 @@ h1 { color: #fbf8ff; text-shadow: 0 0 24px #bd75ff24; }
 .settings-modal { max-width: 780px; padding: 0; isolation: isolate; overflow: visible; background: linear-gradient(145deg, #18142d 0%, #100d20 58%, #17112a 100%); border: 0; box-shadow: 0 25px 100px #00000099, 0 0 42px #7c35bf38; }
   .settings-modal::before { content: ''; position: absolute; inset: -22px; z-index: -2; border-radius: 42px; background: radial-gradient(ellipse at 12% 8%, #ff4fdf3b, transparent 28%), radial-gradient(ellipse at 88% 20%, #28d8ff32, transparent 31%), radial-gradient(ellipse at 50% 100%, #ffdc7030, transparent 38%); filter: blur(20px); pointer-events: none; }
   .settings-modal::after { content: ''; position: absolute; inset: -8px; z-index: -2; border-radius: 28px; background: linear-gradient(110deg, transparent 12%, #ff5ee70c 34%, #48d9ff14 51%, #fff0a512 68%, transparent 86%); filter: blur(12px); pointer-events: none; }
-  .settings-perimeter-trail { position: absolute; inset: -4px; z-index: 3; width: calc(100% + 8px); height: calc(100% + 8px); overflow: visible; pointer-events: none; }
-  .settings-perimeter-trail { overflow: visible; }
-  .settings-trail { fill: none; stroke: url(#settings-rainbow-trail); stroke-linecap: round; stroke-linejoin: round; }
-  .settings-trail-a { stroke-width: .72; stroke-dasharray: 74 926; filter: drop-shadow(0 0 3px #ff5de6) drop-shadow(0 0 7px #8d70ff); animation: settings-trail-flow-a 4.8s linear infinite; }
-  .settings-trail-b { stroke-width: .48; stroke-dasharray: 38 962; opacity: .9; filter: drop-shadow(0 0 3px #56eaff) drop-shadow(0 0 6px #d36cff); animation: settings-trail-flow-b 6.7s linear infinite; }
-  .settings-trail-c { stroke-width: .3; stroke-dasharray: 22 978; opacity: .95; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #ff8bdf); animation: settings-trail-flow-c 8.4s linear infinite; }
-  .settings-spark { fill: #fff; filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #ff72df) drop-shadow(0 0 8px #54e6ff); }
-  .settings-spark-two { fill: #fff4b8; }
-  .settings-spark-three { fill: #d8c8ff; }
-  @keyframes settings-trail-flow-a { to { stroke-dashoffset: -1000; } }
-  @keyframes settings-trail-flow-b { to { stroke-dashoffset: -1000; } }
-  @keyframes settings-trail-flow-c { to { stroke-dashoffset: -1000; } }
-  .settings-star-flare { position: absolute; z-index: 4; width: 4px; height: 4px; border-radius: 50%; background: #fff; box-shadow: 0 0 4px 2px #fff, 0 0 12px 5px #ff72e6, 0 0 28px 10px #8c5dff; pointer-events: none; animation: settings-flare-pulse 2.6s ease-in-out infinite; }
-  .settings-modal::after { animation: settings-ambient-shimmer 5.5s ease-in-out infinite; }
-  @keyframes settings-ambient-shimmer { 0%, 100% { opacity: .55; transform: scale(.98); } 50% { opacity: 1; transform: scale(1.02); } }
-  .settings-star-flare::before, .settings-star-flare::after { content: ''; position: absolute; left: 50%; top: 50%; background: linear-gradient(transparent, #fff, transparent); transform: translate(-50%, -50%); }
-  .settings-star-flare::before { width: 2px; height: 34px; }
-  .settings-star-flare::after { width: 34px; height: 2px; }
-  .settings-star-flare-one { left: 1.5%; top: -4px; }
-  .settings-star-flare-two { right: 1.5%; top: -4px; animation-delay: .8s; box-shadow: 0 0 4px 2px #fff, 0 0 12px 5px #ffe98b, 0 0 28px 10px #ff72dc; }
-  .settings-star-flare-three { right: 2%; bottom: -4px; animation-delay: 1.5s; box-shadow: 0 0 4px 2px #fff, 0 0 12px 5px #38dcff, 0 0 28px 10px #795cff; }
-  @keyframes settings-flare-pulse { 0%, 100% { opacity: .65; transform: scale(.7); } 50% { opacity: 1; transform: scale(1.45); } }
   .settings-modal .settings-heading, .settings-modal .provider-config { background: linear-gradient(145deg, #2a2045cc, #15122bd9); border-color: #ffffff20; }
   .settings-modal .provider-grid { background: transparent; }
   .settings-modal .provider-option { background: linear-gradient(145deg, #352856b8, #18152fb8); border-color: #ffffff2b; box-shadow: inset 0 1px #ffffff12, 0 8px 20px #05030d36; }
