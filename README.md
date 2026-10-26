@@ -44,6 +44,12 @@ In the website API, the former 50,000-character per-email body rejection has bee
 
 The Qwen3 local model uses the one shared generation routine in `Model_Management/main.py` for both the checker and website. It appends Qwen's `/no_think` control token to each local-model request, selecting direct-answer mode so the model does not spend output tokens producing a reasoning trace.
 
+## OpenRouter email summaries
+
+The **Settings** dialog can switch the copilot to OpenRouter. Select **OpenRouter**, keep the prefilled model ID `deepseek/deepseek-v4-flash-0731`, enter an OpenRouter API key, and save. The key is stored only in `.secrets/llm-settings.json`, which is ignored by Git and never returned to the browser.
+
+OpenRouter summaries use the same selected-email body handling, system prompt, Markdown output, and incremental UI rendering as the local Qwen flow. The backend streams OpenRouter's Chat Completions events and forwards each text delta immediately to the browser; it does not wait for the complete model response.
+
 Do not commit `credentials.json` or `.secrets/gmail-token.json`; they authorize access to the mailbox.
 
 ## GUI

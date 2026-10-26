@@ -203,7 +203,7 @@ const DEFAULT_MODELS: Record<AIProvider, string> = {
   local: "local-qwen",
   openai: "gpt-5-mini",
   gemini: "gemini-2.5-flash",
-  openrouter: "openai/gpt-5-mini",
+  openrouter: "deepseek/deepseek-v4-flash-0731",
   "openrouter-free": "meta-llama/llama-3.3-70b-instruct:free",
   "other-api": "model-id-from-provider",
 }
@@ -666,7 +666,7 @@ export default function App() {
           })),
         }),
       })
-      if (!response.ok || !response.body) throw new Error("Local AI could not start the analysis.")
+      if (!response.ok || !response.body) throw new Error("AI analysis could not start.")
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       const rawById = new Map<string, string>()
@@ -695,18 +695,18 @@ export default function App() {
               [analysis.id]: analysis.markdown,
             }))
           } else if (event.type === "error") {
-            throw new Error(event.error || "Local AI could not analyze these emails.")
+            throw new Error(event.error || "AI could not analyze these emails.")
           }
         }
         if (done) break
       }
-      if (!completed.length) throw new Error("Local AI returned no analysis.")
+      if (!completed.length) throw new Error("AI returned no analysis.")
       await markEmailsRead(completed.map((analysis) => analysis.id))
       setAnalyzed(completed)
       setPage("AI analyses")
       notify(`Analyzed ${completed.length} email${completed.length === 1 ? "" : "s"}.`)
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Local AI could not analyze these emails.")
+      notify(error instanceof Error ? error.message : "AI could not analyze these emails.")
     } finally {
       setAnalyzing(false)
     }

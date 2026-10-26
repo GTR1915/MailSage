@@ -47,6 +47,8 @@ DEFAULT_LLM_PROFILE: dict[str, Any] = {
     "temperature": 0.1,
     "max_tokens": 3072,
 }
+SUMMARY_TEMPERATURE = 0.1
+SUMMARY_MAX_TOKENS = 3072
 
 
 @dataclass
@@ -91,7 +93,14 @@ def load_llm_profile() -> dict[str, Any]:
             raise ValueError("Saved LLM settings are invalid JSON.") from error
     if not isinstance(profile, dict):
         raise ValueError("Saved LLM settings must be a JSON object.")
-    return profile
+    # API profiles should summarize with the same sampling and output budget as
+    # the established local Qwen flow.  Older saved profiles are normalized in
+    # memory too, so selecting OpenRouter does not require re-saving settings.
+    normalized = dict(profile)
+    if normalized.get("provider") != "local":
+        normalized.setdefault("temperature", SUMMARY_TEMPERATURE)
+        normalized.setdefault("max_tokens", SUMMARY_MAX_TOKENS)
+    return normalized
 
 
 def public_llm_profile(profile: dict[str, Any]) -> dict[str, Any]:
@@ -142,6 +151,9 @@ def save_llm_profile(profile: dict[str, Any]) -> dict[str, Any]:
     if provider == "local":
         cleaned.pop("api_key", None)
         cleaned.setdefault("local_options", DEFAULT_LLM_PROFILE["local_options"])
+    else:
+        cleaned.setdefault("temperature", SUMMARY_TEMPERATURE)
+        cleaned.setdefault("max_tokens", SUMMARY_MAX_TOKENS)
     LLMManager.from_profile(cleaned)  # Validate the profile shape before persisting it.
     with LLM_SETTINGS_LOCK:
         LLM_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -430,10 +442,18 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
                         email["body"],
                     )
                 else:
-                    response_chunks = iter((manager.chat(
-                        email_to_message(email["subject"], email["sender"], email["recipient"], email["body"]),
+                    # OpenRouter and other OpenAI-compatible providers emit
+                    # Server-Sent Events.  Forward each provider delta directly
+                    # to the browser, just as the local llama-cpp path does.
+                    response_chunks = manager.stream_chat(
+                        email_to_message(
+                            email["subject"],
+                            email["sender"],
+                            email["recipient"],
+                            email["body"],
+                        ),
                         system=SYSTEM_PROMPT,
-                    ),))
+                    )
                 for chunk in response_chunks:
                     chunks.append(chunk)
                     self._send_ndjson({"type": "token", "id": email["id"], "content": chunk})
