@@ -603,6 +603,9 @@ h1 { color: #fbf8ff; text-shadow: 0 0 24px #bd75ff24; }
 .legend-thread { color: #ffd29c; background: #b66c2434; }
 .legend-sender { color: #9ce6ec; background: #267c8734; }
 
+.modal-backdrop:has(.settings-modal) { overflow: hidden; overscroll-behavior: contain; touch-action: none; }
+.modal-backdrop:has(.settings-modal) .settings-modal { max-height: calc(100dvh - 50px); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-width: none; -ms-overflow-style: none; }
+.modal-backdrop:has(.settings-modal) .settings-modal::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .settings-modal { max-width: 780px; padding: 0; isolation: isolate; overflow: visible; background: linear-gradient(145deg, #18142d 0%, #100d20 58%, #17112a 100%); border: 0; box-shadow: 0 25px 100px #00000099, 0 0 42px #7c35bf38; }
   .settings-modal::before { content: ''; position: absolute; inset: -22px; z-index: -2; border-radius: 42px; background: radial-gradient(ellipse at 12% 8%, #ff4fdf3b, transparent 28%), radial-gradient(ellipse at 88% 20%, #28d8ff32, transparent 31%), radial-gradient(ellipse at 50% 100%, #ffdc7030, transparent 38%); filter: blur(20px); pointer-events: none; }
   .settings-modal::after { content: ''; position: absolute; inset: -8px; z-index: -2; border-radius: 28px; background: linear-gradient(110deg, transparent 12%, #ff5ee70c 34%, #48d9ff14 51%, #fff0a512 68%, transparent 86%); filter: blur(12px); pointer-events: none; }
