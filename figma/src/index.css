@@ -728,9 +728,15 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 @media (prefers-reduced-motion: reduce) { body::after, .app-shell::before, .button::before, .fetch-card::before, .inbox-card::before, .stat-card::after, .ai-panel::before, .orb, .button.primary { animation: none; } }
 
 /* AI settings: vivid frosted glass treatment */
+.modal-backdrop:has(.settings-modal) { overflow: hidden; overscroll-behavior: contain; }
 .settings-modal {
   position: relative;
   isolation: isolate;
+  max-height: calc(100dvh - 50px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #b77cff88 transparent;
   overflow: visible;
   border: 1px solid transparent;
   border-radius: 22px;
@@ -854,6 +860,7 @@ body::after { content: ''; position: fixed; inset: -25%; z-index: 0; pointer-eve
 @media (prefers-reduced-motion: reduce) { .settings-modal, .settings-modal::before, .settings-modal::after, .settings-modal .provider-option::after { animation: none; } }
 
 /* Static corner starbursts only; perimeter motion remains removed. */
+.settings-modal { max-height: calc(100dvh - 50px); overflow-y: auto !important; overscroll-behavior: contain; }
 .settings-modal .settings-panel { position: relative; }
 .settings-star-flare { position: absolute; z-index: 6; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 5px 2px #fff, 0 0 14px 5px #ff75e8, 0 0 30px 10px #8564ff; pointer-events: none; animation: realistic-star-twinkle 3.8s ease-in-out infinite; will-change: opacity, transform, filter; }
 .settings-star-flare::marker { display: none; }
