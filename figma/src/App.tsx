@@ -276,130 +276,10 @@ function toEmail(message: GmailApiEmail, index: number): Email {
     unread: labels.has("UNREAD"),
   }
 }
-const EMAILS: Email[] = [
-  {
-    id: 1,
-    sender: "Olivia Rhye",
-    address: "olivia@acme.studio",
-    initials: "OR",
-    color: "purple",
-    subject: "Website redesign — ready for your review",
-    preview:
-      "Hey Alex, the latest designs are ready. Would love your thoughts…",
-    body: "Hey Alex,\n\nThe latest website redesign is ready for your review. We’ve incorporated the feedback from our last session and refined the homepage and product pages.\n\nCould you share your feedback by Wednesday? Once we have your approval, the engineering team can start the handoff.\n\nThanks,\nOlivia",
-    category: "Work",
-    date: "2025-06-16",
-    time: "10:42 AM",
-    unread: true,
-    action:
-      "Review the website redesign and send Olivia your feedback by Wednesday.",
-  },
-  {
-    id: 2,
-    sender: "Linear",
-    address: "notifications@linear.app",
-    initials: "L",
-    color: "violet",
-    subject: "Your weekly workspace digest",
-    preview: "Here’s what happened in your workspace this week. 12 issues…",
-    body: "Your weekly workspace digest\n\nYour team completed 12 issues, started 3 projects, and shipped the new onboarding flow. There are 4 issues assigned to you awaiting review.\n\nVisit your workspace to catch up with the team.",
-    category: "Updates",
-    date: "2025-06-16",
-    time: "9:15 AM",
-    unread: true,
-  },
-  {
-    id: 3,
-    sender: "James Wilson",
-    address: "james@acme.studio",
-    initials: "JW",
-    color: "blue",
-    subject: "Quick sync on the Q3 roadmap?",
-    preview:
-      "Hi Alex, can we find 30 minutes this week to align on priorities?",
-    body: "Hi Alex,\n\nCan we find 30 minutes this week to align on our Q3 priorities? I’d like to discuss the analytics dashboard, customer onboarding, and the mobile release.\n\nI’m free Tuesday at 2 PM or Thursday at 10 AM. Let me know what works for you.\n\nBest,\nJames",
-    category: "Work",
-    date: "2025-06-15",
-    time: "Jun 15",
-    unread: true,
-    action:
-      "Confirm a 30-minute roadmap sync with James: Tuesday at 2 PM or Thursday at 10 AM.",
-  },
-  {
-    id: 4,
-    sender: "Notion",
-    address: "team@makenotion.com",
-    initials: "N",
-    color: "neutral",
-    subject: "A little more focus. A lot more possibility.",
-    preview:
-      "Meet the new features designed to help your team do its best work.",
-    body: "Meet the new features designed to help your team do its best work.\n\nDiscover connected projects, improved search, and a simpler calendar experience. Read our latest product update for a full overview.",
-    category: "Promotions",
-    date: "2025-06-15",
-    time: "Jun 15",
-    unread: false,
-  },
-  {
-    id: 5,
-    sender: "Sarah Chen",
-    address: "sarah@acme.studio",
-    initials: "SC",
-    color: "rose",
-    subject: "June invoice & project summary",
-    preview: "Attached is the invoice for this month along with a quick recap…",
-    body: "Hi Alex,\n\nHere is the invoice for June, totaling $2,400, along with a quick recap of the work completed: design system updates, dashboard wireframes, and usability testing.\n\nPlease arrange payment by June 25. Let me know if you have any questions.\n\nThank you,\nSarah",
-    category: "Finance",
-    date: "2025-06-14",
-    time: "Jun 14",
-    unread: false,
-    action: "Arrange payment of Sarah’s $2,400 June invoice by June 25.",
-  },
-  {
-    id: 6,
-    sender: "Figma",
-    address: "team@figma.com",
-    initials: "F",
-    color: "orange",
-    subject: "Your next great idea starts here",
-    preview: "A few things to inspire your next project. Explore what’s new…",
-    body: "A few things to inspire your next project.\n\nExplore our latest community resources, learn from fellow designers, and discover new ways to bring your ideas to life with Figma.",
-    category: "Updates",
-    date: "2025-06-13",
-    time: "Jun 13",
-    unread: false,
-  },
-  {
-    id: 7,
-    sender: "Michael Foster",
-    address: "michael@acme.studio",
-    initials: "MF",
-    color: "teal",
-    subject: "Re: Customer interview notes",
-    preview: "Thanks for pulling these together. A few interesting patterns…",
-    body: "Hey Alex,\n\nThanks for pulling these customer interview notes together. A few interesting patterns stood out: users want faster onboarding, clearer analytics, and better export options.\n\nLet’s include these insights in the next product planning session.\n\nCheers,\nMichael",
-    category: "Work",
-    date: "2025-06-12",
-    time: "Jun 12",
-    unread: false,
-  },
-  {
-    id: 8,
-    sender: "Stripe",
-    address: "receipts@stripe.com",
-    initials: "S",
-    color: "violet",
-    subject: "Your receipt from Framer",
-    preview:
-      "Your payment of $20.00 to Framer has been processed successfully.",
-    body: "Your payment has been processed successfully.\n\nMerchant: Framer\nAmount: $20.00\nDate: June 11, 2025\nPlan: Monthly subscription\n\nKeep this receipt for your records.",
-    category: "Finance",
-    date: "2025-06-11",
-    time: "Jun 11",
-    unread: false,
-  },
-]
 const categories = ["All emails", "Work", "Updates", "Promotions", "Finance"]
+// Keep the related-email dialog code in place, but do not invoke it until the
+// backend can return real, ranked relationships for the fetched Gmail data.
+const RELATED_EMAIL_CONTEXT_ENABLED = false
 const dateLabel = (date: string) =>
   new Date(date).toLocaleString("en-US", {
     month: "short",
@@ -417,6 +297,8 @@ export default function App() {
   const [end, setEnd] = useState(() => toLocalInputValue(new Date()))
   const [range, setRange] = useState(() => ({ start: toLocalInputValue(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)), end: toLocalInputValue(new Date()) }))
   const [emails, setEmails] = useState<Email[]>([])
+  const [relatedPrompt, setRelatedPrompt] = useState<{ source: Email; matches: { email: Email; reasons: string[] }[] } | null>(null)
+  const [relatedSelection, setRelatedSelection] = useState<(string | number)[]>([])
   const [fetching, setFetching] = useState(false)
   const [fetchProgress, setFetchProgress] = useState({ completed: 0, total: 0, phase: "" })
   const [selected, setSelected] = useState<(string | number)[]>([])
@@ -545,8 +427,8 @@ export default function App() {
     try {
       const response = await fetch("/api/gmail/status")
       const status = (await response.json()) as GmailUser & { connected?: boolean }
-      if (response.ok && status.connected && status.email) {
-        setConnectedEmail(status.email)
+      if (response.ok && status.connected) {
+        setConnectedEmail(status.email || "Gmail connected")
         setGmailUser(status)
       }
     } catch {
@@ -559,15 +441,25 @@ export default function App() {
     notify("Complete the Google permission prompt in your browser to connect Gmail.")
     try {
       const response = await fetch("/api/gmail/connect", { method: "POST" })
-      const result = (await response.json()) as GmailUser & { connected?: boolean; error?: string }
-      if (!response.ok || !result.connected || !result.email) {
-        throw new Error(result.error || "Gmail could not be connected.")
+      const result = (await response.json().catch(() => ({}))) as GmailUser & { connected?: boolean; error?: string }
+      if (!response.ok || !result.connected) {
+        throw new Error(
+          result.error ||
+            `Gmail could not be connected (request returned ${response.status}).`,
+        )
       }
-      setConnectedEmail(result.email)
+      setConnectedEmail(result.email || "Gmail connected")
       setGmailUser(result)
-      notify(`Gmail connected as ${result.email}.`)
+      notify(result.email ? `Gmail connected as ${result.email}.` : "Gmail connected.")
+      void loadGmailStatus()
     } catch (error) {
-      notify(error instanceof Error ? error.message : "Gmail could not be connected.")
+      notify(
+        error instanceof TypeError
+          ? "Could not reach the local Gmail bridge. Start gmail_api.py, then try again."
+          : error instanceof Error
+            ? error.message
+            : "Gmail could not be connected.",
+      )
     } finally {
       setFetching(false)
     }
@@ -727,10 +619,30 @@ export default function App() {
       await new Promise((resolve) => window.setTimeout(resolve, 350))
     }
   }
-  async function analyze(emailsToAnalyze: Email[]) {
+  function findRelated(source: Email) {
+    const keywords = source.subject.toLowerCase().split(/[^a-z0-9]+/).filter((word) => word.length > 4)
+    return fetched.filter((candidate) => candidate.id !== source.id).map((email) => {
+      const reasons = [
+        keywords.some((keyword) => `${email.subject} ${email.preview}`.toLowerCase().includes(keyword)) ? "Semantically similar" : "",
+        email.subject.toLowerCase().includes("re:") && email.sender === source.sender ? "Same thread" : "",
+        email.sender === source.sender ? "Same sender" : "",
+      ].filter(Boolean)
+      return { email, reasons }
+    }).filter((match) => match.reasons.length).sort((a, b) => b.reasons.length - a.reasons.length).slice(0, 4)
+  }
+
+  async function analyze(emailsToAnalyze: Email[], skipRelationCheck = false) {
     if (!emailsToAnalyze.length) {
       notify("Select at least one email to analyze.")
       return
+    }
+    if (RELATED_EMAIL_CONTEXT_ENABLED && !skipRelationCheck && emailsToAnalyze.length === 1) {
+      const matches = findRelated(emailsToAnalyze[0])
+      if (matches.length) {
+        setRelatedSelection(matches.map((match) => match.email.id))
+        setRelatedPrompt({ source: emailsToAnalyze[0], matches })
+        return
+      }
     }
     setAnalyzing(true)
     setStreamedSummary("")
@@ -792,7 +704,7 @@ export default function App() {
       await markEmailsRead(completed.map((analysis) => analysis.id))
       setAnalyzed(completed)
       setPage("AI analyses")
-      notify(`Analyzed ${completed.length} email${completed.length === 1 ? "" : "s"} locally.`)
+      notify(`Analyzed ${completed.length} email${completed.length === 1 ? "" : "s"}.`)
     } catch (error) {
       notify(error instanceof Error ? error.message : "Local AI could not analyze these emails.")
     } finally {
@@ -1215,7 +1127,7 @@ export default function App() {
                         <button
                           className="email-ai"
                           aria-label={`Analyze email from ${email.sender}`}
-                          title="Analyze with local AI"
+                          title="Analyze with AI"
                           onClick={() => analyze([email])}
                         >
                           <Icon name="sparkles" size={16} />
@@ -1335,7 +1247,7 @@ export default function App() {
                     Clear analysis
                   </button>
                   <p className="demo-disclaimer">
-                    Local demo summary · No content was sent to an AI service.
+                    Analysis generated from the selected email content.
                   </p>
                 </div>
               ) : (
@@ -1429,6 +1341,28 @@ export default function App() {
           </button>
         </div>
       )}
+      {RELATED_EMAIL_CONTEXT_ENABLED && relatedPrompt && (
+        <div className="modal-backdrop" onClick={() => setRelatedPrompt(null)}>
+          <section className="modal related-modal" role="dialog" aria-modal="true" aria-labelledby="related-title" onClick={(event) => event.stopPropagation()}>
+            <button className="modal-close icon-button" aria-label="Close related email dialog" onClick={() => setRelatedPrompt(null)}><Icon name="close" /></button>
+            <span className="ai-icon"><Icon name="sparkles" /></span>
+            <span className="settings-kicker">CONTEXT CHECK</span>
+            <h2 id="related-title">A little more context?</h2>
+            <p className="related-intro">I&apos;ve identified {relatedPrompt.matches.length} potentially relevant emails that could provide additional context for your summary.</p>
+            <div className="algorithm-legend"><span className="legend-semantic">Semantic similarity</span><span className="legend-thread">Same thread</span><span className="legend-sender">Same sender</span></div>
+            <div className="related-list">
+              {relatedPrompt.matches.map(({ email, reasons }) => (
+                <label className="related-row" key={email.id}>
+                  <span className={`relation-marker ${reasons[0].toLowerCase().replace(/ /g, "-")}`} />
+                  <input type="checkbox" checked={relatedSelection.includes(email.id)} onChange={() => setRelatedSelection((current) => current.includes(email.id) ? current.filter((id) => id !== email.id) : [...current, email.id])} />
+                  <span className="related-copy"><strong>{email.sender}</strong><span>{email.subject}</span><small>{reasons.join(" · ")}</small></span>
+                </label>
+              ))}
+            </div>
+            <div className="related-actions"><button className="button secondary" onClick={() => setRelatedPrompt(null)}>Continue with this email</button><button className="button primary" onClick={() => { const selectedRelated = fetched.filter((email) => relatedSelection.includes(email.id)); setRelatedPrompt(null); void analyze([relatedPrompt.source, ...selectedRelated], true) }}>Include selected emails <Icon name="arrow" size={15} /></button></div>
+          </section>
+        </div>
+      )}
       {(activeEmail || modal) && (
         <div
           className="modal-backdrop"
@@ -1504,6 +1438,10 @@ export default function App() {
               </>
             ) : modal === "settings" ? (
               <div className="settings-panel">
+                <span className="settings-star-flare settings-star-flare-one" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-two" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-three" aria-hidden="true" />
+                <span className="settings-star-flare settings-star-flare-four" aria-hidden="true" />
                 <div className="settings-heading">
                   <span className="ai-icon"><Icon name="sparkles" size={20} /></span>
                   <div><span className="settings-kicker">AI SETTINGS</span><h2>Choose how your copilot thinks.</h2><p>Switch between an on-device model and your preferred API provider.</p></div>
@@ -1547,8 +1485,8 @@ export default function App() {
                   <div>
                     <h3>Choose your time frame</h3>
                     <p>
-                      Pick a date range and click Fetch emails. Demo emails are
-                      available June 11–16, 2025.
+                      Pick a date range and click Fetch emails to load messages
+                      from your connected Gmail account.
                     </p>
                   </div>
                 </div>
@@ -1568,8 +1506,8 @@ export default function App() {
                     <h3>Read an email</h3>
                     <p>
                       Click an email’s sparkle icon or select multiple emails to
-                      see a local demo summary and action items. No data leaves
-                      this app.
+                      generate a summary and action items. Your configured AI
+                      provider determines how selected content is processed.
                     </p>
                   </div>
                 </div>

@@ -4,3 +4,4 @@ credentials.json
 emails.jsonl
 __pycache__/
 Models
+.figma

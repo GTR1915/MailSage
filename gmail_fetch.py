@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 from google.auth.transport.requests import Request
-from google.auth.exceptions import RefreshError
+from google.auth.exceptions import RefreshError, TransportError
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
@@ -57,8 +57,9 @@ def get_gmail_service(
     if credentials and credentials.expired and credentials.refresh_token:
         try:
             credentials.refresh(Request())
-        except RefreshError:
-            # invalid_grant means the refresh token expired or was revoked.
+        except (RefreshError, TransportError):
+            # invalid_grant means the refresh token expired or was revoked. A
+            # transport failure is also not a usable authenticated session.
             credentials = None
 
     if not credentials or not credentials.valid:

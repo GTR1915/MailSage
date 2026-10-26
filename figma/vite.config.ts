@@ -35,7 +35,7 @@ react(),
       port: parseInt(process.env.PORT || '8443'),
       strictPort: false,
       proxy: {
-        '/api': 'http://127.0.0.1:8000',
+        '/api': 'http://127.0.0.1:8001',
       },
       watch: {
         ignored: [

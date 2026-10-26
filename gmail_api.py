@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -14,7 +15,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request as UrlRequest, urlopen
 
 from google.oauth2.credentials import Credentials
-from google.auth.exceptions import RefreshError
+from google.auth.exceptions import RefreshError, TransportError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -32,6 +33,7 @@ from Model_Management.model_config import MODEL_PATH
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
+API_PORT = int(os.environ.get("GMAIL_ANALYZER_API_PORT", "8001"))
 CACHE = GmailCache(PROJECT_ROOT / ".data" / "gmail-cache.sqlite3")
 LLM_SETTINGS_PATH = PROJECT_ROOT / ".secrets" / "llm-settings.json"
 PROFILE_PHOTO_PATH = PROJECT_ROOT / ".data" / "gmail-profile-photo"
@@ -240,58 +242,43 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         )
 
     def _gmail_status(self) -> None:
-        """Report an already usable connection without opening a browser."""
+        """A saved token is the persistent indicator of a signed-in mailbox."""
         _, token_path = self._gmail_paths()
         if not token_path.exists():
             self._send_json(HTTPStatus.OK, {"connected": False})
             return
+
         try:
-            # Do not refresh here: a user action on Connect Gmail should be what
-            # starts consent when the saved token has expired.
             credentials = Credentials.from_authorized_user_file(str(token_path))
-            if (
-                credentials.expired
-                or not credentials.valid
-                or not credentials.has_scopes(SCOPES)
-            ):
-                self._send_json(HTTPStatus.OK, {"connected": False})
+            if credentials.valid and credentials.has_scopes(SCOPES):
+                self._send_json(
+                    HTTPStatus.OK,
+                    {"connected": True, **self._google_identity(credentials)},
+                )
                 return
-            self._send_json(HTTPStatus.OK, {"connected": True, **self._google_identity(credentials)})
-        except (OSError, ValueError, HttpError, RefreshError):
-            self._send_json(HTTPStatus.OK, {"connected": False})
+        except (OSError, ValueError, HttpError, RefreshError, TransportError):
+            # Connect Gmail and Fetch will refresh the token or request consent.
+            pass
+
+        self._send_json(HTTPStatus.OK, {"connected": True})
 
     def _connect_gmail(self) -> None:
-        """Open Google consent if no usable token exists, then return its account."""
+        """Use the same authorization and token-refresh path as Gmail fetching."""
         credentials_path, token_path = self._gmail_paths()
         try:
-            force_reauth = not token_path.exists()
-            if not force_reauth:
-                try:
-                    saved = Credentials.from_authorized_user_file(str(token_path))
-                    force_reauth = (
-                        saved.expired
-                        or not saved.valid
-                        or not saved.has_scopes(SCOPES)
-                    )
-                except (OSError, ValueError):
-                    force_reauth = True
-            get_gmail_service(
-                credentials_path, token_path, force_reauth=force_reauth
-            )
-            try:
-                credentials = Credentials.from_authorized_user_file(str(token_path))
-                identity = self._google_identity(credentials)
-            except (HttpError, RefreshError) as error:
-                # A revoked access token can appear locally valid until Gmail is
-                # contacted. A changed scope set can fail the same way during
-                # token refresh. In both cases, restart OAuth consent.
-                if isinstance(error, HttpError) and error.resp.status not in (401, 403):
-                    raise
-                get_gmail_service(credentials_path, token_path, force_reauth=True)
-                credentials = Credentials.from_authorized_user_file(str(token_path))
-                identity = self._google_identity(credentials)
+            get_gmail_service(credentials_path, token_path)
+            credentials = Credentials.from_authorized_user_file(str(token_path))
+            identity = self._google_identity(credentials)
             self._send_json(HTTPStatus.OK, {"connected": True, **identity})
-        except (FileNotFoundError, OSError, ValueError, HttpError, RefreshError) as error:
+        except (
+            FileNotFoundError,
+            OSError,
+            ValueError,
+            HttpError,
+            RefreshError,
+            TransportError,
+            TimeoutError,
+        ) as error:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"Could not connect Gmail: {error}"})
 
     @staticmethod
@@ -608,8 +595,8 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
 
 
 def main() -> None:
-    server = ThreadingHTTPServer(("127.0.0.1", 8000), GmailRequestHandler)
-    print("Gmail API available at http://127.0.0.1:8000")
+    server = ThreadingHTTPServer(("127.0.0.1", API_PORT), GmailRequestHandler)
+    print(f"Gmail API available at http://127.0.0.1:{API_PORT}")
     server.serve_forever()
 
 
