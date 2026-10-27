@@ -438,6 +438,12 @@ const dateLabel = (date: string) =>
     minute: "2-digit",
   })
 
+function InfoPage({ kind }: { kind: "Features" | "Privacy Policy" }) {
+  const features = kind === "Features"
+  const items = [["calendar", "Fetch by date range", "Choose exactly which slice of your inbox to bring into focus."], ["sparkles", "AI-powered analysis", "Turn long threads into useful signals, with the provider you choose."], ["mail", "Smart categories", "See work, personal, finance, and other messages at a glance."], ["eye", "Unread tracking", "Keep unread context visible."], ["star", "Starred emails", "Build a dependable list of messages worth keeping close."], ["file", "AI summaries", "Get concise takeaways without opening every thread."], ["cpu", "Local LLM option", "Run analysis on your device when you prefer local processing."]]
+  return <div className="info-page"><div className="info-hero"><div><div className="eyebrow">MAILSAGE {features ? "CAPABILITIES" : "TRUST CENTER"}</div><h1>{features ? "A calmer way to work through email." : "Privacy, in plain language."}</h1><p>{features ? "MailSage turns a busy inbox into a focused workspace, with thoughtful AI controls at every step." : "This policy explains what MailSage can access, how your email is processed, and the choices you keep."}</p></div><span className="info-hero-orb"><Icon name={features ? "sparkles" : "shield"} size={38} /></span></div>{features ? <><div className="feature-grid">{items.map(([icon, title, description]) => <article className="feature-card" key={title}><span className="feature-icon"><Icon name={icon} size={21} /></span><h2>{title}</h2><p>{description}</p></article>)}</div><section className="info-callout"><Icon name="shield" size={20} /><div><strong>You stay in control.</strong><p>Fetch only what you need, choose how analysis happens, and keep your inbox workflow focused.</p></div></section></> : <div className="policy-layout"><aside className="policy-toc"><strong>On this page</strong><a href="#access">Gmail access</a><a href="#processing">Processing</a><a href="#providers">AI providers</a><a href="#storage">Storage & sharing</a><a href="#control">Your control</a></aside><article className="policy-card"><p className="policy-updated">Last updated: October 27, 2026</p><p>This policy describes MailSage&apos;s current application behavior. Confirm deployment-specific details before publishing it as a legal notice.</p><h2 id="access">Gmail access and permissions</h2><p>MailSage requests the permissions needed to identify your account and fetch messages you ask for. You can revoke access through Google.</p><h2 id="processing">Email data processing</h2><p>Fetched messages are used to display your workspace, track unread and starred state, categorize messages, and produce requested analyses.</p><h2 id="providers">AI providers and local processing</h2><p>External provider analysis sends selected email content through that provider&apos;s API. With the local LLM option, analysis is intended to run on your device; verify your runtime configuration.</p><h2 id="storage">Storage and sharing</h2><p>This page does not promise a specific retention period, encryption method, or deletion schedule; confirm those details for your deployment.</p><h2 id="control">Your control</h2><p>You can choose the date range and analysis provider, disconnect Gmail, or revoke Google access. Contact your deployment operator for deletion requests.</p></article></div>}</div>
+}
+
 export default function App() {
   const [page, setPage] = useState("Inbox")
   const [query, setQuery] = useState("")
@@ -895,6 +901,8 @@ export default function App() {
             { label: "Inbox", icon: "mail" },
             { label: "AI analyses", icon: "sparkles" },
             { label: "Starred", icon: "star" },
+            { label: "Features", icon: "sparkles" },
+            { label: "Privacy Policy", icon: "shield" },
           ] as const).map((item) => (
             <button
               key={item.label}
@@ -981,7 +989,8 @@ export default function App() {
             {gmailUser?.picture ? <img className="profile-avatar small user-photo" src={gmailUser.picture} alt="" /> : <span className="profile-avatar small">{initials}</span>}
           </div>
         </header>
-        <main>
+        <main className={page === "Features" || page === "Privacy Policy" ? "info-page-active" : ""}>
+          {(page === "Features" || page === "Privacy Policy") && <InfoPage kind={page} />}
           <div className="page-heading">
             <div>
               <div className="eyebrow">A LITTLE CLARITY FOR YOUR INBOX</div>
