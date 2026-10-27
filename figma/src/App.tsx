@@ -871,18 +871,6 @@ export default function App() {
   const progressPercent = fetchProgress.total
     ? Math.min(100, Math.round((fetchProgress.completed / fetchProgress.total) * 100))
     : 0
-  if (page === "Privacy Policy") {
-    return (
-      <div className="privacy-site">
-        <header className="privacy-site-header">
-          <button className="privacy-brand" onClick={() => setPage("Inbox")} aria-label="Back to MailSage inbox"><span className="privacy-brand-mark"><Icon name="mail" size={20} /></span><span>MailSage</span></button>
-          <nav aria-label="Privacy site navigation"><button onClick={() => setPage("Features")}>Features</button><button onClick={() => setPage("Inbox")}>How it works</button><button className="active" onClick={() => setPage("Privacy Policy")}>Privacy</button></nav>
-        </header>
-        <InfoPage kind="Privacy Policy" />
-      </div>
-    )
-  }
-
   return (
     <div className="app-shell">
       <aside className="sidebar">
