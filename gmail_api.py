@@ -38,6 +38,7 @@ CACHE = GmailCache(PROJECT_ROOT / ".data" / "gmail-cache.sqlite3")
 LLM_SETTINGS_PATH = PROJECT_ROOT / ".secrets" / "llm-settings.json"
 PROFILE_PHOTO_PATH = PROJECT_ROOT / ".data" / "gmail-profile-photo"
 PROFILE_PHOTO_METADATA_PATH = PROJECT_ROOT / ".data" / "gmail-profile-photo.json"
+PROFILE_IDENTITY_PATH = PROJECT_ROOT / ".data" / "gmail-profile.json"
 
 DEFAULT_LLM_PROFILE: dict[str, Any] = {
     "provider": "local",
@@ -254,33 +255,28 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
         )
 
     def _gmail_status(self) -> None:
-        """A saved token is the persistent indicator of a signed-in mailbox."""
+        """Restore the locally saved signed-in state without calling Google."""
         _, token_path = self._gmail_paths()
         if not token_path.exists():
             self._send_json(HTTPStatus.OK, {"connected": False})
             return
 
-        try:
-            credentials = Credentials.from_authorized_user_file(str(token_path))
-            if credentials.valid and credentials.has_scopes(SCOPES):
-                self._send_json(
-                    HTTPStatus.OK,
-                    {"connected": True, **self._google_identity(credentials)},
-                )
-                return
-        except (OSError, ValueError, HttpError, RefreshError, TransportError):
-            # Connect Gmail and Fetch will refresh the token or request consent.
-            pass
-
-        self._send_json(HTTPStatus.OK, {"connected": True})
+        # The token file is deliberately the source of truth for login state.
+        # Profile details are a separate local cache populated at login, so a
+        # restart never needs a second Google profile request.
+        self._send_json(HTTPStatus.OK, {"connected": True, **self._load_cached_profile()})
 
     def _connect_gmail(self) -> None:
         """Use the same authorization and token-refresh path as Gmail fetching."""
         credentials_path, token_path = self._gmail_paths()
         try:
+            use_cached_profile = self._has_reusable_token(token_path) and bool(self._load_cached_profile())
             get_gmail_service(credentials_path, token_path)
-            credentials = Credentials.from_authorized_user_file(str(token_path))
-            identity = self._google_identity(credentials)
+            if use_cached_profile:
+                identity = self._load_cached_profile()
+            else:
+                credentials = Credentials.from_authorized_user_file(str(token_path))
+                identity = self._google_identity(credentials)
             self._send_json(HTTPStatus.OK, {"connected": True, **identity})
         except (
             FileNotFoundError,
@@ -294,8 +290,20 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": f"Could not connect Gmail: {error}"})
 
     @staticmethod
+    def _has_reusable_token(token_path: Path) -> bool:
+        """Whether this token represents the existing account, not a new login."""
+        try:
+            credentials = Credentials.from_authorized_user_file(str(token_path))
+            return bool(
+                credentials.has_scopes(SCOPES)
+                and (credentials.valid or (credentials.expired and credentials.refresh_token))
+            )
+        except (OSError, ValueError):
+            return False
+
+    @staticmethod
     def _google_identity(credentials: Credentials) -> dict[str, str | None]:
-        """Return the signed-in user's public Google profile fields."""
+        """Fetch and persist the signed-in user's public Google profile fields."""
         profile = (
             build("oauth2", "v2", credentials=credentials, cache_discovery=False)
             .userinfo()
@@ -303,7 +311,7 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             .execute()
         )
         picture = profile.get("picture")
-        return {
+        identity = {
             "email": profile.get("email"),
             "first_name": profile.get("given_name"),
             "last_name": profile.get("family_name"),
@@ -311,6 +319,45 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             # repeated client-side image requests with HTTP 429.
             "picture": GmailRequestHandler._cache_profile_photo(picture),
         }
+        GmailRequestHandler._save_cached_profile(identity)
+        return identity
+
+    @staticmethod
+    def _load_cached_profile() -> dict[str, str | None]:
+        """Read locally persisted profile fields; never make a network request."""
+        try:
+            stored = json.loads(PROFILE_IDENTITY_PATH.read_text(encoding="utf-8"))
+            if not isinstance(stored, dict):
+                return {}
+        except (OSError, ValueError, json.JSONDecodeError):
+            return {}
+
+        identity: dict[str, str | None] = {}
+        for field_name in ("email", "first_name", "last_name"):
+            value = stored.get(field_name)
+            if isinstance(value, str) and value:
+                identity[field_name] = value
+        if PROFILE_PHOTO_PATH.exists() and PROFILE_PHOTO_METADATA_PATH.exists():
+            identity["picture"] = "/api/gmail/profile-photo"
+        return identity
+
+    @staticmethod
+    def _save_cached_profile(identity: dict[str, str | None]) -> None:
+        """Persist only display information, never OAuth credentials."""
+        profile = {
+            field_name: identity.get(field_name)
+            for field_name in ("email", "first_name", "last_name")
+        }
+        try:
+            PROFILE_IDENTITY_PATH.parent.mkdir(parents=True, exist_ok=True)
+            PROFILE_IDENTITY_PATH.write_text(
+                json.dumps(profile, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        except OSError:
+            # Login remains usable even if a disk write fails; the token stays
+            # authoritative and the profile will be fetched on the next login.
+            pass
 
     @staticmethod
     def _cache_profile_photo(picture_url: Any) -> str | None:
@@ -366,6 +413,7 @@ class GmailRequestHandler(BaseHTTPRequestHandler):
             PROJECT_ROOT / "emails.jsonl",
             PROFILE_PHOTO_PATH,
             PROFILE_PHOTO_METADATA_PATH,
+            PROFILE_IDENTITY_PATH,
         )
         removed: list[str] = []
         try:

@@ -1437,11 +1437,12 @@ export default function App() {
                 </div>
               </>
             ) : modal === "settings" ? (
-              <div className="settings-panel">
+              <>
                 <span className="settings-star-flare settings-star-flare-one" aria-hidden="true" />
                 <span className="settings-star-flare settings-star-flare-two" aria-hidden="true" />
                 <span className="settings-star-flare settings-star-flare-three" aria-hidden="true" />
                 <span className="settings-star-flare settings-star-flare-four" aria-hidden="true" />
+                <div className="settings-panel">
                 <div className="settings-heading">
                   <span className="ai-icon"><Icon name="sparkles" size={20} /></span>
                   <div><span className="settings-kicker">AI SETTINGS</span><h2>Choose how your copilot thinks.</h2><p>Switch between an on-device model and your preferred API provider.</p></div>
@@ -1473,7 +1474,8 @@ export default function App() {
                   <button className="button secondary" onClick={() => setModal(null)}>Cancel</button>
                   <button className="button primary" onClick={() => void saveAISettings()} disabled={savingSettings}>{savingSettings ? "Saving…" : "Save AI settings"}<Icon name="arrow" size={15} /></button>
                 </div>
-              </div>
+                </div>
+              </>
             ) : (
               <>
                 <span className="ai-icon">
